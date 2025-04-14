@@ -35,15 +35,15 @@ class _HomeScreenState extends State<HomeScreen> {
             size: 25,
           ),
           Image.asset('assets/images/send2.png', width: 25.w, height: 25.h),
-          // IconButton(
-          //   icon: const Icon(Icons.logout, color: Colors.black),
-          //   onPressed: () async {
-          //     await FirebaseAuth.instance.signOut();
-          //     if (context.mounted) {
-          //       Navigator.of(context).pushReplacementNamed('/login_screen'); // Điều hướng về trang login
-          //     }
-          //   },
-          // ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.black),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushReplacementNamed('/login_screen'); // Điều hướng về trang login
+              }
+            },
+          ),
         ],
         backgroundColor: const Color.fromARGB(246, 246, 246, 255),
       ),

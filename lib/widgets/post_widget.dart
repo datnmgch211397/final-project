@@ -90,7 +90,7 @@ class _PostWidgetState extends State<PostWidget> {
                 child: Row(
                   children: [
                     Text(
-                      'dat1' + '',
+                      widget.snapshot['username'] + '',
                       style: TextStyle(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.bold,

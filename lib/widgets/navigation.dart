@@ -1,5 +1,5 @@
 import 'package:final_app2/screens/add_screen.dart';
-import 'package:final_app2/screens/explore_screen.dart';
+import 'package:final_app2/screens/search_screen.dart';
 import 'package:final_app2/screens/home.dart';
 import 'package:final_app2/screens/profile_screen.dart';
 import 'package:final_app2/screens/reels_screen.dart';
@@ -69,7 +69,7 @@ class _NavigationsScreenState extends State<NavigationsScreen> {
         onPageChanged: onPageChanged,
         children: const [
           HomeScreen(),
-          ExploreScreen(),
+          SearchScreen(),
           AddScreen(),
           ReelsScreen(),
           ProfileScreen(),
