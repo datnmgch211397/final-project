@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:final_app2/data/firebase_service/firestore.dart';
 import 'package:final_app2/data/model/user_model.dart';
+import 'package:final_app2/screens/post_screen.dart';
 import 'package:final_app2/util/image_cached.dart';
+import 'package:final_app2/widgets/post_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -65,7 +67,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       var snap = snapshot.data!.docs[index];
-                      return Container(child: CachedImage(snap['postImage']));
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => PostScreen(snap.data()),
+                            ),
+                          );
+                        },
+                        child: CachedImage(snap['postImage']),
+                      );
                     }, childCount: snapshot.data!.docs.length),
                   );
                 },
@@ -207,6 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
+          SizedBox(height: 5.h),
         ],
       ),
     );

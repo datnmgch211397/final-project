@@ -79,7 +79,7 @@ class Firebase_Firestore {
     }
   }
 
-  Future<bool> CreatePost({
+  Future<bool> createPost({
     required String postImage,
     required String caption,
     required String location,
@@ -109,6 +109,36 @@ class Firebase_Firestore {
       throw Exception('Failed to create post: ${e.message}');
     } catch (e) {
       throw Exception('Error creating post: $e');
+    }
+  }
+   Future<bool> createReels({
+    required String video,
+    required String caption,
+  }) async {
+    try {
+      if (_auth.currentUser == null) {
+        throw Exception('User not logged in');
+      }
+
+      var uid = Uuid().v4();
+      DateTime data =  DateTime.now();
+      UserModel user = await getUser();
+
+      await _firebaseFirestore.collection('reels').doc(uid).set({
+        'video': video,
+        'username': user.username,
+        'profileImage': user.profile,
+        'caption': caption,
+        'uid': _auth.currentUser!.uid,
+        'reelId': uid,
+        'like': [],
+        'time': data,
+      });
+      return true;
+    } on FirebaseException catch (e) {
+      throw Exception('Failed to create reel: ${e.message}');
+    } catch (e) {
+      throw Exception('Error creating reel: $e');
     }
   }
 }
