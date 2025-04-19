@@ -69,7 +69,7 @@ class _EditReelScreenState extends State<EditReelScreen> {
                         width: 280.w,
                         child: TextField(
                           controller: caption,
-                          maxLength: 10,
+                          maxLength: 15,
                           decoration: InputDecoration(
                             hintText: 'Add a caption...',
                             border: InputBorder.none,
@@ -91,7 +91,8 @@ class _EditReelScreenState extends State<EditReelScreen> {
                             ),
                             child: Text(
                               'Safe draft',
-                              style: TextStyle(color: Colors.black),
+                              style: TextStyle(color: Colors.black,
+                              fontSize: 16.sp,),
                             ),
                           ),
                           GestureDetector(
@@ -112,7 +113,7 @@ class _EditReelScreenState extends State<EditReelScreen> {
                             },
                             child: Container(
                               alignment: Alignment.center,
-                              height: 30.h,
+                              height: 45.h,
                               width: 150.w,
                               decoration: BoxDecoration(
                                 color: Colors.blue,

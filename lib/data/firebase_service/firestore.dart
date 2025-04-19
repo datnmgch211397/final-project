@@ -36,7 +36,7 @@ class Firebase_Firestore {
     }
   }
 
-  Future<UserModel> getUser() async {
+  Future<UserModel> getUser({String? uidd}) async {
     try {
       if (_auth.currentUser == null) {
         throw Exception('User not logged in');
@@ -45,7 +45,7 @@ class Firebase_Firestore {
       final user =
           await _firebaseFirestore
               .collection('users')
-              .doc(_auth.currentUser!.uid)
+              .doc(uidd ?? _auth.currentUser!.uid)
               .get();
 
       if (!user.exists || user.data() == null) {
@@ -111,7 +111,8 @@ class Firebase_Firestore {
       throw Exception('Error creating post: $e');
     }
   }
-   Future<bool> createReels({
+
+  Future<bool> createReels({
     required String video,
     required String caption,
   }) async {
@@ -121,7 +122,7 @@ class Firebase_Firestore {
       }
 
       var uid = Uuid().v4();
-      DateTime data =  DateTime.now();
+      DateTime data = DateTime.now();
       UserModel user = await getUser();
 
       await _firebaseFirestore.collection('reels').doc(uid).set({
@@ -140,5 +141,101 @@ class Firebase_Firestore {
     } catch (e) {
       throw Exception('Error creating reel: $e');
     }
+  }
+
+  Future<bool> createComment({
+    required String comment,
+    required String type,
+    required String uidd,
+  }) async {
+    try {
+      if (_auth.currentUser == null) {
+        throw Exception('User not logged in');
+      }
+
+      var uid = Uuid().v4();
+      UserModel user = await getUser();
+
+      await _firebaseFirestore
+          .collection(type)
+          .doc(uidd)
+          .collection('comments')
+          .doc(uid)
+          .set({
+            'comment': comment,
+            'username': user.username,
+            'profileImage': user.profile,
+            'commentUid': uid,
+          });
+      return true;
+    } on FirebaseException catch (e) {
+      throw Exception('Failed to create reel: ${e.message}');
+    } catch (e) {
+      throw Exception('Error creating reel: $e');
+    }
+  }
+
+  Future<String> like({
+    required List like,
+    required String type,
+    required String uid,
+    required String postId,
+  }) async {
+    String res = 'error';
+    try {
+      if (like.contains(uid)) {
+        _firebaseFirestore.collection(type).doc(postId).update({
+          'like': FieldValue.arrayRemove([uid]),
+        });
+      } else {
+        _firebaseFirestore.collection(type).doc(postId).update({
+          'like': FieldValue.arrayUnion([uid]),
+        });
+      }
+      res = 'success';
+    } on Exception catch (e) {
+      res = e.toString();
+    }
+    return res;
+  }
+
+  Future<String> follow({required String uid}) async {
+    String res = 'error';
+    DocumentSnapshot snap =
+        await _firebaseFirestore
+            .collection('users')
+            .doc(_auth.currentUser!.uid)
+            .get();
+    List follow = (snap.data() as dynamic)['following'];
+    try {
+      if (follow.contains(uid)) {
+        await _firebaseFirestore
+            .collection('users')
+            .doc(_auth.currentUser!.uid)
+            .update({
+              'following': FieldValue.arrayRemove([uid]),
+            });
+        await _firebaseFirestore
+            .collection('users')
+            .doc(uid)
+            .update({
+              'followers': FieldValue.arrayRemove([_auth.currentUser!.uid]),
+            });
+      } else {
+        await _firebaseFirestore
+            .collection('users')
+            .doc(_auth.currentUser!.uid)
+            .update({
+              'following': FieldValue.arrayUnion([uid]),
+            });
+        await _firebaseFirestore.collection('users').doc(uid).update({
+          'followers': FieldValue.arrayUnion([_auth.currentUser!.uid]),
+        });
+      }
+      res = 'success';
+    } on Exception catch (e) {
+      res = e.toString();
+    }
+    return res;
   }
 }

@@ -3,6 +3,7 @@ import 'package:final_app2/screens/search_screen.dart';
 import 'package:final_app2/screens/home.dart';
 import 'package:final_app2/screens/profile_screen.dart';
 import 'package:final_app2/screens/reels_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -17,6 +18,8 @@ int _currentIndex = 0;
 
 class _NavigationsScreenState extends State<NavigationsScreen> {
   late PageController pageController;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  
   @override
   void initState() {
     super.initState();
@@ -67,12 +70,12 @@ class _NavigationsScreenState extends State<NavigationsScreen> {
       body: PageView(
         controller: pageController,
         onPageChanged: onPageChanged,
-        children: const [
+        children:  [
           HomeScreen(),
           SearchScreen(),
           AddScreen(),
           ReelsScreen(),
-          ProfileScreen(),
+          ProfileScreen(uid: _auth.currentUser!.uid),
         ],
       ),
     );

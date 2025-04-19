@@ -9,7 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, required this.uid});
+  final String uid;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -18,6 +19,44 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final FirebaseFirestore _firebaseFirestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool isCurrentUser = false;
+  int postNumber = 0;
+  List following = [];
+  bool isFollowing = false;
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    getdata();
+    if (_auth.currentUser!.uid == widget.uid) {
+      setState(() {
+        isCurrentUser = true;
+      });
+    } else {
+      setState(() {
+        isCurrentUser = false;
+      });
+    }
+  }
+
+  getdata() async {
+    DocumentSnapshot snap =
+        await _firebaseFirestore
+            .collection('users')
+            .doc(_auth.currentUser!.uid)
+            .get();
+    List follow = (snap.data() as dynamic)['following'];
+    if (follow.contains(widget.uid)) {
+      setState(() {
+        isFollowing = true;
+      });
+    } else {
+      setState(() {
+        isFollowing = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -29,7 +68,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             slivers: [
               SliverToBoxAdapter(
                 child: FutureBuilder(
-                  future: Firebase_Firestore().getUser(),
+                  future: Firebase_Firestore().getUser(uidd: widget.uid),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
@@ -45,7 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 stream:
                     _firebaseFirestore
                         .collection('posts')
-                        .where('uid', isEqualTo: _auth.currentUser!.uid)
+                        .where('uid', isEqualTo: widget.uid)
                         .snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
@@ -57,7 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Center(child: Text("Error")),
                     );
                   }
-
+                  postNumber = snapshot.data!.docs.length;
                   return SliverGrid(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
@@ -77,7 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         },
                         child: CachedImage(snap['postImage']),
                       );
-                    }, childCount: snapshot.data!.docs.length),
+                    }, childCount: postNumber),
                   );
                 },
               ),
@@ -115,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       SizedBox(width: 35.w),
                       Text(
-                        '10',
+                        postNumber.toString(),
                         style: TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.bold,
@@ -186,23 +225,98 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           SizedBox(height: 20.h),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 15.w),
-            child: Container(
-              height: 30.h,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(5.r),
-                border: Border.all(color: Colors.grey.shade400),
-              ),
-              child: Text(
-                'Edit Profile',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12.sp),
+          if (!isFollowing)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14.w),
+              child: GestureDetector(
+                onTap: () {
+                  if (!isCurrentUser) {
+                    Firebase_Firestore().follow(uid: widget.uid);
+                    setState(() {
+                      isFollowing = true;
+                    });
+                  }
+                },
+                child: Container(
+                  height: 30.h,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: isCurrentUser ? Colors.white : Colors.blue,
+                    borderRadius: BorderRadius.circular(5.r),
+                    border: Border.all(
+                      color: isCurrentUser ? Colors.grey.shade400 : Colors.blue,
+                    ),
+                  ),
+                  child:
+                      isCurrentUser
+                          ? Text(
+                            'Edit Profile',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 14.sp),
+                          )
+                          : Text(
+                            'Follow',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.white,
+                            ),
+                          ),
+                ),
               ),
             ),
-          ),
+          if (isFollowing)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14.w),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Firebase_Firestore().follow(uid: widget.uid);
+                        setState(() {
+                          isFollowing = false;
+                        });
+                      },
+                      child: Container(
+                        alignment: Alignment.center,
+                        height: 30.h,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(5.r),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Text(
+                          'Unfollow',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Container(
+                      alignment: Alignment.center,
+                      height: 30.h,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(5.r),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Text(
+                        'Message',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14.sp, color: Colors.black),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           SizedBox(height: 5.h),
           SizedBox(
             width: double.infinity,
