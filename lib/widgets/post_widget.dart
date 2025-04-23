@@ -6,6 +6,7 @@ import 'package:final_app2/widgets/like_animation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:final_app2/screens/profile_screen.dart';
 
 class PostWidget extends StatefulWidget {
   final Map<String, dynamic> snapshot;
@@ -19,6 +20,7 @@ class _PostWidgetState extends State<PostWidget> {
   bool isLikeAnimating = false;
   String user = '';
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isDeleted = false;
 
   @override
   void initState() {
@@ -72,8 +74,160 @@ class _PostWidgetState extends State<PostWidget> {
     print('Share tapped');
   }
 
+  void _showMoreOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_auth.currentUser!.uid == widget.snapshot['uid'])
+              ListTile(
+                leading: Icon(Icons.edit),
+                title: Text('Edit Post'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _editPost();
+                },
+              ),
+            if (_auth.currentUser!.uid == widget.snapshot['uid'])
+              ListTile(
+                leading: Icon(Icons.delete, color: Colors.red),
+                title: Text('Delete Post', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  _deletePost();
+                  Navigator.of(context).pop;
+                },
+              ),
+            ListTile(
+              leading: Icon(Icons.share),
+              title: Text('Share'),
+              onTap: () {
+                Navigator.pop(context);
+                // Implement share functionality
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _editPost() async {
+    final TextEditingController captionController = TextEditingController();
+    final TextEditingController locationController = TextEditingController();
+    captionController.text = widget.snapshot['caption'];
+    locationController.text = widget.snapshot['location'] ?? '';
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Edit Post'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: captionController,
+                  decoration: InputDecoration(
+                    labelText: 'Caption',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: locationController,
+                  decoration: InputDecoration(
+                    labelText: 'Location',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  String res = await Firebase_Firestore().updatePost(
+                    postId: widget.snapshot['postId'],
+                    caption: captionController.text,
+                    location: locationController.text,
+                  );
+                  if (res == 'success') {
+                    setState(() {});
+                  }
+                },
+                child: Text('Save'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _deletePost() async {
+    Firebase_Firestore().deletePost(postId: widget.snapshot['postId']);
+    // Navigator.of(context).pop();
+
+    // bool confirmDelete =
+    //     await showDialog(
+    //       context: context,
+    //       builder:
+    //           (context) => AlertDialog(
+    //             title: Text('Delete Post'),
+    //             content: Text('Are you sure you want to delete this post?'),
+    //             actions: [
+    //               TextButton(
+    //                 onPressed: () => Navigator.pop(context, false),
+    //                 child: Text('Cancel'),
+    //               ),
+    //               TextButton(
+    //                 onPressed: () => Navigator.pop(context, true),
+    //                 child: Text('Delete', style: TextStyle(color: Colors.red)),
+    //               ),
+    //             ],
+    //           ),
+    //     ) ??
+    //     false;
+
+    // if (confirmDelete && mounted) {
+    //   setState(() {
+    //     _isDeleted = true;
+    //   });
+
+    //   String res = await Firebase_Firestore().deletePost(
+    //     postId: widget.snapshot['postId'],
+    //   );
+
+    //   if (res == 'success') {
+    //     if (mounted) {
+    //       ScaffoldMessenger.of(
+    //         context,
+    //       ).showSnackBar(SnackBar(content: Text('Post deleted successfully')));
+    //     }
+    //   } else {
+    //     if (mounted) {
+    //       setState(() {
+    //         _isDeleted = false;
+    //       });
+    //       ScaffoldMessenger.of(
+    //         context,
+    //       ).showSnackBar(SnackBar(content: Text('Error deleting post: $res')));
+    //     }
+    //   }
+    // }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isDeleted) {
+      return SizedBox.shrink();
+    }
+
     return Container(
       color: Colors.white,
       child: Column(
@@ -85,26 +239,44 @@ class _PostWidgetState extends State<PostWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    ClipOval(
-                      child: SizedBox(
-                        height: 35.h,
-                        width: 35.w,
-                        child: CachedImage(widget.snapshot['profileImage']),
+                ListTile(
+                  leading: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) =>
+                                  ProfileScreen(uid: widget.snapshot['uid']),
+                        ),
+                      );
+                    },
+                    child: CircleAvatar(
+                      backgroundImage: NetworkImage(
+                        widget.snapshot['profileImage'],
                       ),
                     ),
-                    SizedBox(width: 10.w),
-                    Text(
-                      widget.snapshot['username'] ?? '',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  ),
+                  title: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) =>
+                                  ProfileScreen(uid: widget.snapshot['uid']),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      widget.snapshot['username'],
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    Spacer(),
-                    IconButton(onPressed: () {}, icon: Icon(Icons.more_horiz)),
-                  ],
+                  ),
+                  trailing: IconButton(
+                    icon: Icon(Icons.more_horiz),
+                    onPressed: _showMoreOptions,
+                  ),
                 ),
                 Padding(
                   padding: EdgeInsets.only(left: 45.w),
@@ -155,7 +327,7 @@ class _PostWidgetState extends State<PostWidget> {
 
           // Actions
           Padding(
-            padding: EdgeInsets.only(left:8.w, right: 8.w, top: 6.h, ),
+            padding: EdgeInsets.only(left: 8.w, right: 8.w, top: 6.h),
             child: Row(
               children: [
                 LikeAnimation(
@@ -226,7 +398,6 @@ class _PostWidgetState extends State<PostWidget> {
                     ),
                   ],
                 ),
-               
               ],
             ),
           ),

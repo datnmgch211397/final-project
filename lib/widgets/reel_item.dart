@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:video_player/video_player.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:final_app2/screens/profile_screen.dart';
 
 class ReelItem extends StatefulWidget {
   final Map<String, dynamic> snapshot;
@@ -20,14 +22,18 @@ class _ReelItemState extends State<ReelItem> {
   bool isPlaying = true;
   bool isAnimating = false;
   bool isLikeAnimating = false;
+  bool isFollowing = false;
   String user = '';
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isDeleted = false;
 
   @override
   void initState() {
     super.initState();
     _initializeVideo();
     user = _auth.currentUser!.uid;
+    _checkFollowingStatus();
   }
 
   Future<void> _initializeVideo() async {
@@ -45,6 +51,29 @@ class _ReelItemState extends State<ReelItem> {
         });
     } catch (e) {
       print('Error initializing video: $e');
+    }
+  }
+
+  void _checkFollowingStatus() async {
+    if (_auth.currentUser!.uid != widget.snapshot['uid']) {
+      DocumentSnapshot userDoc =
+          await _firestore
+              .collection('users')
+              .doc(_auth.currentUser!.uid)
+              .get();
+      List following = (userDoc.data() as dynamic)['following'];
+      setState(() {
+        isFollowing = following.contains(widget.snapshot['uid']);
+      });
+    }
+  }
+
+  void _followUser() async {
+    String res = await Firebase_Firestore().follow(uid: widget.snapshot['uid']);
+    if (res == 'success') {
+      setState(() {
+        isFollowing = !isFollowing;
+      });
     }
   }
 
@@ -130,8 +159,95 @@ class _ReelItemState extends State<ReelItem> {
     print('Share tapped');
   }
 
+  void _showMoreOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_auth.currentUser!.uid == widget.snapshot['uid'])
+              ListTile(
+                leading: Icon(Icons.edit),
+                title: Text('Edit Reel'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _editReel();
+                },
+              ),
+            if (_auth.currentUser!.uid == widget.snapshot['uid'])
+              ListTile(
+                leading: Icon(Icons.delete, color: Colors.red),
+                title: Text('Delete Reel', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteReel();
+                },
+              ),
+            ListTile(
+              leading: Icon(Icons.share),
+              title: Text('Share'),
+              onTap: () {
+                Navigator.pop(context);
+                // Implement share functionality
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _editReel() async {
+    final TextEditingController captionController = TextEditingController();
+    captionController.text = widget.snapshot['caption'] ?? '';
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Edit Reel'),
+            content: TextField(
+              controller: captionController,
+              decoration: InputDecoration(
+                labelText: 'Caption',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  String res = await Firebase_Firestore().updateReel(
+                    reelId: widget.snapshot['reelId'],
+                    caption: captionController.text,
+                  );
+                  if (res == 'success') {
+                    Navigator.pop(context);
+                    setState(() {});
+                  }
+                },
+                child: Text('Save'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _deleteReel() async {
+    Firebase_Firestore().deleteReel(reelId: widget.snapshot['reelId']);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isDeleted) {
+      return SizedBox.shrink();
+    }
+
     return Container(
       color: Colors.black,
       child: Stack(
@@ -234,49 +350,93 @@ class _ReelItemState extends State<ReelItem> {
 
           // User info and caption
           Positioned(
-            left: 15.w,
-            right: 15.w,
-            bottom: 30.h,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    ClipOval(
-                      child: SizedBox(
-                        height: 35.h,
-                        width: 35.w,
-                        child: CachedImage(widget.snapshot['profileImage']),
-                      ),
-                    ),
-                    SizedBox(width: 10.w),
-                    Text(
-                      widget.snapshot['username'] ?? '',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(width: 10.w),
-                    OutlinedButton(
-                      onPressed: () {},
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.white),
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text('Follow', style: TextStyle(fontSize: 13.sp)),
-                    ),
-                  ],
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Colors.black.withOpacity(0.8), Colors.transparent],
                 ),
-                SizedBox(height: 10.h),
-                Text(
-                  widget.snapshot['caption'] ?? '',
-                  style: TextStyle(color: Colors.white, fontSize: 14.sp),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => ProfileScreen(
+                                    uid: widget.snapshot['uid'],
+                                  ),
+                            ),
+                          );
+                        },
+                        child: CircleAvatar(
+                          backgroundImage: NetworkImage(
+                            widget.snapshot['profileImage'],
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => ProfileScreen(
+                                    uid: widget.snapshot['uid'],
+                                  ),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          widget.snapshot['username'],
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (_auth.currentUser!.uid != widget.snapshot['uid'])
+                        TextButton(
+                          onPressed: _followUser,
+                          child: Text(
+                            isFollowing ? 'Following' : 'Follow',
+                            style: TextStyle(
+                              color: isFollowing ? Colors.grey : Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: 10.h),
+                  Text(
+                    widget.snapshot['caption'] ?? '',
+                    style: TextStyle(color: Colors.white, fontSize: 14.sp),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          Positioned(
+            top: 0,
+            right: 0,
+            child: IconButton(
+              icon: Icon(Icons.more_horiz, color: Colors.white),
+              onPressed: _showMoreOptions,
             ),
           ),
         ],

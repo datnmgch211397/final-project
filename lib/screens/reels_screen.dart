@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../widgets/reel_item.dart';
 
 class ReelsScreen extends StatefulWidget {
-  const ReelsScreen({super.key});
+  final int? initialIndex;
+  final List<QueryDocumentSnapshot<Object?>>? initialReels;
+
+  const ReelsScreen({super.key, this.initialIndex, this.initialReels});
 
   @override
   State<ReelsScreen> createState() => _ReelsScreenState();
@@ -11,9 +14,41 @@ class ReelsScreen extends StatefulWidget {
 
 class _ReelsScreenState extends State<ReelsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: widget.initialIndex ?? 0);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    // If we have initial reels, show them directly
+    if (widget.initialReels != null) {
+      return Scaffold(
+        body: SafeArea(
+          child: PageView.builder(
+            controller: _pageController,
+            scrollDirection: Axis.vertical,
+            itemCount: widget.initialReels!.length,
+            itemBuilder: (context, index) {
+              final data =
+                  widget.initialReels![index].data() as Map<String, dynamic>;
+              return ReelItem(data);
+            },
+          ),
+        ),
+      );
+    }
+
+    // Otherwise, load all reels from Firestore
     return Scaffold(
       body: SafeArea(
         child: StreamBuilder<QuerySnapshot>(
@@ -36,6 +71,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
             }
 
             return PageView.builder(
+              controller: _pageController,
               scrollDirection: Axis.vertical,
               itemCount: snapshot.data!.docs.length,
               itemBuilder: (context, index) {

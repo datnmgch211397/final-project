@@ -22,9 +22,7 @@ class CachedImage extends StatelessWidget {
           ),
         );
       },
-      errorWidget: (context, url, error)=> Container(
-        color: Colors.amber,
-      ),
+      errorWidget: (context, url, error) => Container(color: Colors.amber),
     );
   }
 }

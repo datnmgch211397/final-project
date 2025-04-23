@@ -61,19 +61,33 @@ class _SearchChatScreenState extends State<SearchChatScreen> {
             child: StreamBuilder<QuerySnapshot>(
               stream: chatController.searchUsers(searchQuery),
               builder: (context, snapshot) {
+                if (searchQuery.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No user available',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  );
+                }
                 if (!snapshot.hasData) {
-                  return Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
                 final users = snapshot.data!.docs;
                 List<UserTile> userWidgets = [];
+
                 for (var user in users) {
                   final userData = user.data() as Map<String, dynamic>;
-                  if (userData['uid'] != loggedInUser!.uid) {
+                  final userId = userData['uid'] ?? '';
+                  final username = userData['username'] ?? 'Unknown';
+                  final email = userData['email'] ?? 'No email';
+                  final profile = userData['profile'] ?? '';
+
+                  if (userId != loggedInUser!.uid ) {
                     final userWidget = UserTile(
-                      userId: userData['uid'],
-                      name: userData['username'],
-                      email: userData['email'],
-                      profile: userData['profile'],
+                      userId: userId,
+                      name: username,
+                      email: email,
+                      profile: profile,
                     );
                     userWidgets.add(userWidget);
                   }
@@ -94,7 +108,12 @@ class UserTile extends StatelessWidget {
   final String email;
   final String profile;
 
-  const UserTile({required this.userId, required this.name, required this.email, required this.profile});
+  const UserTile({
+    required this.userId,
+    required this.name,
+    required this.email,
+    required this.profile,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -104,10 +123,15 @@ class UserTile extends StatelessWidget {
       title: Text(name),
       subtitle: Text(email),
       onTap: () async {
-        final chatId = await chatController.getChatRoom(userId) ?? await chatController.createChatRoom(userId);
+        final chatId =
+            await chatController.getChatRoom(userId) ??
+            await chatController.createChatRoom(userId);
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => ChatScreen(chatId: chatId, receiverId: userId)),
+          MaterialPageRoute(
+            builder:
+                (context) => ChatScreen(chatId: chatId, receiverId: userId),
+          ),
         );
       },
     );

@@ -1,12 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:final_app2/data/firebase_service/firestore.dart';
+import 'package:final_app2/data/firebase_service/storage.dart';
 import 'package:final_app2/data/model/user_model.dart';
 import 'package:final_app2/screens/post_screen.dart';
+import 'package:final_app2/screens/reels_screen.dart';
+import 'package:final_app2/screens/chat_screen.dart';
 import 'package:final_app2/util/image_cached.dart';
 import 'package:final_app2/widgets/post_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:video_player/video_player.dart';
+import '../data/firebase_service/chat_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.uid});
@@ -23,9 +30,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int postNumber = 0;
   List following = [];
   bool isFollowing = false;
+  bool _isLoading = false;
+  Map<String, VideoPlayerController> _videoControllers = {};
+
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     getdata();
     if (_auth.currentUser!.uid == widget.uid) {
@@ -37,6 +46,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isCurrentUser = false;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _videoControllers.values.forEach((controller) => controller.dispose());
+    super.dispose();
   }
 
   getdata() async {
@@ -57,10 +72,185 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void followUser() async {
+    String res = await Firebase_Firestore().follow(uid: widget.uid);
+    if (res == 'success') {
+      setState(() {
+        isFollowing = !isFollowing;
+      });
+    }
+  }
+
+  void _editProfile() async {
+    final TextEditingController usernameController = TextEditingController();
+    final TextEditingController bioController = TextEditingController();
+    File? selectedImage;
+    String? imageUrl;
+
+    // Get current user data
+    UserModel currentUser = await Firebase_Firestore().getUser(
+      uidd: widget.uid,
+    );
+    usernameController.text = currentUser.username;
+    bioController.text = currentUser.bio;
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => StatefulBuilder(
+            builder:
+                (context, setDialogState) => AlertDialog(
+                  title: Text('Edit Profile'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () async {
+                            final ImagePicker picker = ImagePicker();
+                            final XFile? image = await picker.pickImage(
+                              source: ImageSource.gallery,
+                            );
+                            if (image != null) {
+                              setDialogState(() {
+                                selectedImage = File(image.path);
+                              });
+                            }
+                          },
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundImage:
+                                selectedImage != null
+                                    ? FileImage(selectedImage!)
+                                    : NetworkImage(currentUser.profile)
+                                        as ImageProvider,
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                        TextField(
+                          controller: usernameController,
+                          decoration: InputDecoration(
+                            labelText: 'Username',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                        TextField(
+                          controller: bioController,
+                          decoration: InputDecoration(
+                            labelText: 'Bio',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 3,
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        if (usernameController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Username cannot be empty')),
+                          );
+                          return;
+                        }
+
+                        if (usernameController.text.length < 3) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Username must be at least 3 characters',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        try {
+                          setDialogState(() {
+                            _isLoading = true;
+                          });
+
+                          if (selectedImage != null) {
+                            imageUrl = await StorageMethod()
+                                .uploadImageToStorage(
+                                  'Profile',
+                                  selectedImage!,
+                                );
+                          }
+
+                          String res = await Firebase_Firestore()
+                              .updateUserProfile(
+                                uid: widget.uid,
+                                username: usernameController.text,
+                                bio: bioController.text,
+                                profileImage: imageUrl,
+                              );
+
+                          setDialogState(() {
+                            _isLoading = false;
+                          });
+
+                          if (res == 'success') {
+                            Navigator.pop(context);
+                            setState(() {}); // Refresh the profile screen
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error updating profile: $res'),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          setDialogState(() {
+                            _isLoading = false;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error updating profile: $e'),
+                            ),
+                          );
+                        }
+                      },
+                      child:
+                          _isLoading
+                              ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : Text('Save'),
+                    ),
+                  ],
+                ),
+          ),
+    );
+  }
+
+  Future<Widget> _buildReelThumbnail(String videoUrl, String reelId) async {
+    if (!_videoControllers.containsKey(reelId)) {
+      final controller = VideoPlayerController.network(videoUrl);
+      await controller.initialize();
+      _videoControllers[reelId] = controller;
+    }
+
+    return AspectRatio(
+      aspectRatio: 1,
+      child: VideoPlayer(_videoControllers[reelId]!),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Scaffold(
         backgroundColor: Colors.grey.shade100,
         body: SafeArea(
@@ -80,45 +270,138 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
               ),
-              StreamBuilder(
-                stream:
-                    _firebaseFirestore
-                        .collection('posts')
-                        .where('uid', isEqualTo: widget.uid)
-                        .snapshots(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const SliverToBoxAdapter(
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  } else if (snapshot.hasError) {
-                    return const SliverToBoxAdapter(
-                      child: Center(child: Text("Error")),
-                    );
-                  }
-                  postNumber = snapshot.data!.docs.length;
-                  return SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          mainAxisSpacing: 4,
-                          crossAxisSpacing: 4,
-                        ),
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      var snap = snapshot.data!.docs[index];
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => PostScreen(snap.data()),
-                            ),
+              SliverFillRemaining(
+                child: TabBarView(
+                  children: [
+                    // Posts Tab
+                    StreamBuilder(
+                      stream:
+                          _firebaseFirestore
+                              .collection('posts')
+                              .where('uid', isEqualTo: widget.uid)
+                              .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
                           );
-                        },
-                        child: CachedImage(snap['postImage']),
-                      );
-                    }, childCount: postNumber),
-                  );
-                },
+                        } else if (snapshot.hasError) {
+                          return const Center(child: Text("Error"));
+                        }
+                        postNumber = snapshot.data!.docs.length;
+                        if (snapshot.data!.docs.isEmpty) {
+                          return const Center(child: Text("No posts yet"));
+                        }
+                        return GridView.builder(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                mainAxisSpacing: 1,
+                                crossAxisSpacing: 1,
+                              ),
+                          itemCount: snapshot.data!.docs.length,
+                          itemBuilder: (context, index) {
+                            var snap = snapshot.data!.docs[index];
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => PostScreen(snap.data()),
+                                  ),
+                                );
+                              },
+                              child: CachedImage(snap['postImage']),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    // Reels Tab
+                    StreamBuilder(
+                      stream:
+                          _firebaseFirestore
+                              .collection('reels')
+                              .where('uid', isEqualTo: widget.uid)
+                              .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        } else if (snapshot.hasError) {
+                          return const Center(child: Text("Error"));
+                        }
+                        if (snapshot.data!.docs.isEmpty) {
+                          return const Center(child: Text("No reels yet"));
+                        }
+                        return GridView.builder(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                mainAxisSpacing: 1,
+                                crossAxisSpacing: 1,
+                              ),
+                          itemCount: snapshot.data!.docs.length,
+                          itemBuilder: (context, index) {
+                            var snap = snapshot.data!.docs[index];
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => ReelsScreen(
+                                          initialIndex: index,
+                                          initialReels: snapshot.data!.docs,
+                                        ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                color: Colors.black,
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    FutureBuilder(
+                                      future: _buildReelThumbnail(
+                                        snap['video'],
+                                        snap['reelId'],
+                                      ),
+                                      builder: (context, snapshot) {
+                                        if (snapshot.connectionState ==
+                                            ConnectionState.waiting) {
+                                          return const Center(
+                                            child: CircularProgressIndicator(),
+                                          );
+                                        }
+                                        if (snapshot.hasError) {
+                                          return const Center(
+                                            child: Icon(
+                                              Icons.error_outline,
+                                              color: Colors.white,
+                                            ),
+                                          );
+                                        }
+                                        return snapshot.data!;
+                                      },
+                                    ),
+                                    const Center(
+                                      child: Icon(
+                                        Icons.play_circle_outline,
+                                        color: Colors.white,
+                                        size: 30,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -230,11 +513,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: EdgeInsets.symmetric(horizontal: 14.w),
               child: GestureDetector(
                 onTap: () {
-                  if (!isCurrentUser) {
-                    Firebase_Firestore().follow(uid: widget.uid);
-                    setState(() {
-                      isFollowing = true;
-                    });
+                  if (isCurrentUser) {
+                    _editProfile();
+                  } else {
+                    followUser();
                   }
                 },
                 child: Container(
@@ -273,10 +555,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(
                     child: GestureDetector(
                       onTap: () {
-                        Firebase_Firestore().follow(uid: widget.uid);
-                        setState(() {
-                          isFollowing = false;
-                        });
+                        followUser();
                       },
                       child: Container(
                         alignment: Alignment.center,
@@ -307,10 +586,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         borderRadius: BorderRadius.circular(5.r),
                         border: Border.all(color: Colors.grey.shade200),
                       ),
-                      child: Text(
-                        'Message',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14.sp, color: Colors.black),
+                      child: InkWell(
+                        onTap: () => _openChatWithUser(user),
+                        child: Text(
+                          'Message',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.black,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -325,16 +610,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
               unselectedLabelColor: Colors.grey,
               labelColor: Colors.black,
               indicatorColor: Colors.black,
-              tabs: [
-                Icon(Icons.grid_on),
-                Icon(Icons.video_collection),
-                Icon(Icons.person),
-              ],
+              tabs: [Icon(Icons.grid_on), Icon(Icons.video_collection)],
             ),
           ),
           SizedBox(height: 5.h),
         ],
       ),
     );
+  }
+
+  void _openChatWithUser(UserModel user) async {
+    final ChatController chatController = ChatController();
+
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(child: CircularProgressIndicator()),
+      );
+
+      // Get or create a chat room
+      final chatId =
+          await chatController.getChatRoom(widget.uid) ??
+          await chatController.createChatRoom(widget.uid);
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Navigate to chat screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => ChatScreen(chatId: chatId, receiverId: widget.uid),
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Show error
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error starting chat: $e')));
+    }
   }
 }

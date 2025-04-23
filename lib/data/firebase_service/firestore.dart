@@ -166,12 +166,11 @@ class Firebase_Firestore {
             'username': user.username,
             'profileImage': user.profile,
             'commentUid': uid,
+            'uid': _auth.currentUser!.uid,
           });
       return true;
-    } on FirebaseException catch (e) {
-      throw Exception('Failed to create reel: ${e.message}');
     } catch (e) {
-      throw Exception('Error creating reel: $e');
+      return false;
     }
   }
 
@@ -215,12 +214,9 @@ class Firebase_Firestore {
             .update({
               'following': FieldValue.arrayRemove([uid]),
             });
-        await _firebaseFirestore
-            .collection('users')
-            .doc(uid)
-            .update({
-              'followers': FieldValue.arrayRemove([_auth.currentUser!.uid]),
-            });
+        await _firebaseFirestore.collection('users').doc(uid).update({
+          'followers': FieldValue.arrayRemove([_auth.currentUser!.uid]),
+        });
       } else {
         await _firebaseFirestore
             .collection('users')
@@ -237,5 +233,138 @@ class Firebase_Firestore {
       res = e.toString();
     }
     return res;
+  }
+
+  Future<String> updateUserProfile({
+    required String uid,
+    required String username,
+    required String bio,
+    String? profileImage,
+  }) async {
+    try {
+      // Get current user data to keep existing profile if no new image
+      final currentUser = await getUser(uidd: uid);
+      final finalProfileImage = profileImage ?? currentUser.profile;
+
+      // Update user profile
+      await _firebaseFirestore.collection('users').doc(uid).update({
+        'username': username,
+        'bio': bio,
+        'profile': finalProfileImage,
+      });
+
+      // Update all posts
+      final userPostsSnapshot =
+          await _firebaseFirestore
+              .collection('posts')
+              .where('uid', isEqualTo: uid)
+              .get();
+
+      for (var post in userPostsSnapshot.docs) {
+        await post.reference.update({
+          'username': username,
+          'profileImage': finalProfileImage,
+        });
+      }
+
+      // Update all reels
+      final userReelsSnapshot =
+          await _firebaseFirestore
+              .collection('reels')
+              .where('uid', isEqualTo: uid)
+              .get();
+
+      for (var reel in userReelsSnapshot.docs) {
+        await reel.reference.update({
+          'username': username,
+          'profileImage': finalProfileImage,
+        });
+      }
+
+      // Update comments in posts
+      final allPostsSnapshot =
+          await _firebaseFirestore.collection('posts').get();
+      for (var post in allPostsSnapshot.docs) {
+        final commentsSnapshot =
+            await post.reference
+                .collection('comments')
+                .where('uid', isEqualTo: uid)
+                .get();
+        for (var comment in commentsSnapshot.docs) {
+          await comment.reference.update({
+            'username': username,
+            'profileImage': finalProfileImage,
+          });
+        }
+      }
+
+      // Update comments in reels
+      final allReelsSnapshot =
+          await _firebaseFirestore.collection('reels').get();
+      for (var reel in allReelsSnapshot.docs) {
+        final commentsSnapshot =
+            await reel.reference.collection('comments').get();
+        for (var comment in commentsSnapshot.docs) {
+          if (comment.data()['uid'] == uid) {
+            await comment.reference.update({
+              'username': username,
+              'profileImage': finalProfileImage,
+            });
+          }
+        }
+      }
+
+      return 'success';
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String> updatePost({
+    required String postId,
+    required String caption,
+    required String location,
+  }) async {
+    try {
+      await _firebaseFirestore.collection('posts').doc(postId).update({
+        'caption': caption,
+        'location': location,
+      });
+      return 'success';
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String> deletePost({required String postId}) async {
+    try {
+      await _firebaseFirestore.collection('posts').doc(postId).delete();
+      return 'success';
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String> updateReel({
+    required String reelId,
+    required String caption,
+  }) async {
+    try {
+      await _firebaseFirestore.collection('reels').doc(reelId).update({
+        'caption': caption,
+      });
+      return 'success';
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String> deleteReel({required String reelId}) async {
+    try {
+      await _firebaseFirestore.collection('reels').doc(reelId).delete();
+      return 'success';
+    } catch (e) {
+      return e.toString();
+    }
   }
 }
