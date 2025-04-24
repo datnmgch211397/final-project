@@ -96,7 +96,7 @@ class _PostWidgetState extends State<PostWidget> {
                 title: Text('Delete Post', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   _deletePost();
-                  Navigator.of(context).pop;
+                 
                 },
               ),
             ListTile(
@@ -171,55 +171,13 @@ class _PostWidgetState extends State<PostWidget> {
 
   void _deletePost() async {
     Firebase_Firestore().deletePost(postId: widget.snapshot['postId']);
-    // Navigator.of(context).pop();
-
-    // bool confirmDelete =
-    //     await showDialog(
-    //       context: context,
-    //       builder:
-    //           (context) => AlertDialog(
-    //             title: Text('Delete Post'),
-    //             content: Text('Are you sure you want to delete this post?'),
-    //             actions: [
-    //               TextButton(
-    //                 onPressed: () => Navigator.pop(context, false),
-    //                 child: Text('Cancel'),
-    //               ),
-    //               TextButton(
-    //                 onPressed: () => Navigator.pop(context, true),
-    //                 child: Text('Delete', style: TextStyle(color: Colors.red)),
-    //               ),
-    //             ],
-    //           ),
-    //     ) ??
-    //     false;
-
-    // if (confirmDelete && mounted) {
-    //   setState(() {
-    //     _isDeleted = true;
-    //   });
-
-    //   String res = await Firebase_Firestore().deletePost(
-    //     postId: widget.snapshot['postId'],
-    //   );
-
-    //   if (res == 'success') {
-    //     if (mounted) {
-    //       ScaffoldMessenger.of(
-    //         context,
-    //       ).showSnackBar(SnackBar(content: Text('Post deleted successfully')));
-    //     }
-    //   } else {
-    //     if (mounted) {
-    //       setState(() {
-    //         _isDeleted = false;
-    //       });
-    //       ScaffoldMessenger.of(
-    //         context,
-    //       ).showSnackBar(SnackBar(content: Text('Error deleting post: $res')));
-    //     }
-    //   }
-    // }
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Post deleted successfully'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   @override

@@ -27,6 +27,7 @@ class Firebase_Firestore {
             'profile': profile,
             'followers': [],
             'following': [],
+            'role': 'user',
           });
       return true;
     } on FirebaseException catch (e) {
@@ -65,12 +66,13 @@ class Firebase_Firestore {
       }
 
       return UserModel(
-        snapUser['email'],
-        snapUser['username'],
-        snapUser['bio'],
-        snapUser['profile'],
-        snapUser['followers'],
-        snapUser['following'],
+        email: snapUser['email'],
+        username: snapUser['username'],
+        bio: snapUser['bio'],
+        profile: snapUser['profile'],
+        followers: snapUser['followers'],
+        following: snapUser['following'],
+        role: snapUser['role'] ?? 'user', // Default role is 'user' if not found
       );
     } on FirebaseException catch (e) {
       throw Exception('Firebase error: ${e.message}');
@@ -155,6 +157,7 @@ class Firebase_Firestore {
 
       var uid = Uuid().v4();
       UserModel user = await getUser();
+      DateTime now = DateTime.now();
 
       await _firebaseFirestore
           .collection(type)
@@ -167,6 +170,7 @@ class Firebase_Firestore {
             'profileImage': user.profile,
             'commentUid': uid,
             'uid': _auth.currentUser!.uid,
+            'time': now,
           });
       return true;
     } catch (e) {
@@ -365,6 +369,34 @@ class Firebase_Firestore {
       return 'success';
     } catch (e) {
       return e.toString();
+    }
+  }
+
+  // Check if the current user is an admin
+  Future<bool> isCurrentUserAdmin() async {
+    try {
+      if (_auth.currentUser == null) {
+        return false;
+      }
+
+      final user = await getUser();
+      return user.role == 'admin';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Get the role of the current user
+  Future<String> getCurrentUserRole() async {
+    try {
+      if (_auth.currentUser == null) {
+        throw Exception('User not logged in');
+      }
+
+      final user = await getUser();
+      return user.role;
+    } catch (e) {
+      return 'user'; // Default to 'user' if any error occurs
     }
   }
 }

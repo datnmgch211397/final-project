@@ -80,21 +80,6 @@ class _EditReelScreenState extends State<EditReelScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          Container(
-                            alignment: Alignment.center,
-                            height: 45.h,
-                            width: 150.w,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10.r),
-                              border: Border.all(color: Colors.black),
-                            ),
-                            child: Text(
-                              'Safe draft',
-                              style: TextStyle(color: Colors.black,
-                              fontSize: 16.sp,),
-                            ),
-                          ),
                           GestureDetector(
                             onTap: () async {
                               setState(() {

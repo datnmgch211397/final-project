@@ -240,6 +240,12 @@ class _ReelItemState extends State<ReelItem> {
 
   void _deleteReel() async {
     Firebase_Firestore().deleteReel(reelId: widget.snapshot['reelId']);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Reel deleted successfully'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   @override

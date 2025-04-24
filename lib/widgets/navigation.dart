@@ -19,7 +19,7 @@ int _currentIndex = 0;
 class _NavigationsScreenState extends State<NavigationsScreen> {
   late PageController pageController;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  
+
   @override
   void initState() {
     super.initState();
@@ -55,14 +55,8 @@ class _NavigationsScreenState extends State<NavigationsScreen> {
           items: [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
             BottomNavigationBarItem(icon: Icon(Icons.search), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.camera), label: ''),
-            BottomNavigationBarItem(
-              icon: Image.asset(
-                'assets/images/reels-icon.png',
-                height: 20.h,
-              ),
-              label: '',
-            ),
+            BottomNavigationBarItem(icon: Icon(Icons.add_box), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.movie), label: ''),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
           ],
         ),
@@ -70,7 +64,7 @@ class _NavigationsScreenState extends State<NavigationsScreen> {
       body: PageView(
         controller: pageController,
         onPageChanged: onPageChanged,
-        children:  [
+        children: [
           HomeScreen(),
           SearchScreen(),
           AddScreen(),

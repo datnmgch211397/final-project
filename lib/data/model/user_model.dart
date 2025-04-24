@@ -1,16 +1,19 @@
 class UserModel {
-  String email;
-  String username;
-  String bio;
-  String profile;
-  List following;
-  List followers;
-  UserModel(
-    this.email,
-    this.username,
-    this.bio,
-    this.profile,
-    this.following,
-    this.followers,
-  );
+  final String email;
+  final String username;
+  final String bio;
+  final String profile;
+  final List following;
+  final List followers;
+  final String role;
+
+  UserModel({
+    required this.email,
+    required this.username,
+    required this.bio,
+    required this.profile,
+    required this.following,
+    required this.followers,
+    this.role = 'user',
+  });
 }
