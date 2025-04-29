@@ -43,8 +43,10 @@ class _AddPostTextScreenState extends State<AddPostTextScreen> {
                     }
 
                     // Upload image to storage
-                    String postUrl = await StorageMethod()
-                        .uploadImageToStorage('post', widget._file);
+                    String postUrl = await StorageMethod().uploadImageToStorage(
+                      'post',
+                      widget._file,
+                    );
 
                     // Create post in Firestore
                     await Firebase_Firestore().createPost(
@@ -133,7 +135,7 @@ class _AddPostTextScreenState extends State<AddPostTextScreen> {
                           child: TextField(
                             controller: location,
                             decoration: const InputDecoration(
-                              hintText: 'Add location...',
+                              hintText: 'Add description...',
                               border: InputBorder.none,
                             ),
                           ),

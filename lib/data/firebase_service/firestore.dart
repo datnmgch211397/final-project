@@ -342,6 +342,16 @@ class Firebase_Firestore {
 
   Future<String> deletePost({required String postId}) async {
     try {
+      final commentsSnapshot =
+          await _firebaseFirestore
+              .collection('posts')
+              .doc(postId)
+              .collection('comments')
+              .get();
+      for (var comment in commentsSnapshot.docs) {
+        await comment.reference.delete();
+      }
+
       await _firebaseFirestore.collection('posts').doc(postId).delete();
       return 'success';
     } catch (e) {
@@ -365,7 +375,34 @@ class Firebase_Firestore {
 
   Future<String> deleteReel({required String reelId}) async {
     try {
+      final commentsSnapshot =
+          await _firebaseFirestore
+              .collection('reels')
+              .doc(reelId)
+              .collection('comments')
+              .get();
+      for (var comment in commentsSnapshot.docs) {
+        await comment.reference.delete();
+      }
       await _firebaseFirestore.collection('reels').doc(reelId).delete();
+      return 'success';
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String> deleteComment({
+    required String type,
+    required String postId,
+    required String commentId,
+  }) async {
+    try {
+      await _firebaseFirestore
+          .collection(type)
+          .doc(postId)
+          .collection('comments')
+          .doc(commentId)
+          .delete();
       return 'success';
     } catch (e) {
       return e.toString();

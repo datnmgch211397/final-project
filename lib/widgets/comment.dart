@@ -4,6 +4,7 @@ import 'package:final_app2/data/firebase_service/firestore.dart';
 import 'package:final_app2/util/image_cached.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Comment extends StatefulWidget {
   Comment(this.type, this.uid, {super.key});
@@ -17,6 +18,8 @@ class Comment extends StatefulWidget {
 class _CommentState extends State<Comment> {
   final comment = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
@@ -40,6 +43,7 @@ class _CommentState extends State<Comment> {
                       .collection(widget.type)
                       .doc(widget.uid)
                       .collection('comments')
+                      .orderBy('time', descending: true)
                       .snapshots(),
               builder: (context, snapshot) {
                 return Padding(
@@ -49,7 +53,10 @@ class _CommentState extends State<Comment> {
                       if (!snapshot.hasData) {
                         return const Center(child: CircularProgressIndicator());
                       }
-                      return commentItem(snapshot.data!.docs[index].data());
+                      return commentItem(
+                        snapshot.data!.docs[index].data(),
+                        snapshot.data!.docs[index].id,
+                      );
                     },
                     itemCount:
                         snapshot.data == null ? 0 : snapshot.data!.docs.length,
@@ -106,26 +113,86 @@ class _CommentState extends State<Comment> {
     );
   }
 
-  Widget commentItem(final snapshot) {
-    return ListTile(
-      leading: ClipOval(
-        child: SizedBox(
-          width: 35.w,
-          height: 35.h,
-          child: CachedImage(snapshot['profileImage']),
+  Widget commentItem(final snapshot, String commentId) {
+    final DateTime commentTime = (snapshot['time'] as Timestamp).toDate();
+    final String formattedTime = formatDate(commentTime, [
+      HH,
+      ':',
+      nn,
+      ' ',
+      am,
+      ' ',
+      dd,
+      '/',
+      mm,
+      '/',
+      yyyy,
+    ]);
+
+    return GestureDetector(
+      onLongPress: () {
+        if (_auth.currentUser?.uid == snapshot['uid']) {
+          showDialog(
+            context: context,
+            builder:
+                (context) => AlertDialog(
+                  title: const Text('Delete Comment'),
+                  content: const Text(
+                    'Are you sure you want to delete this comment?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await Firebase_Firestore().deleteComment(
+                          type: widget.type,
+                          postId: widget.uid,
+                          commentId: commentId,
+                        );
+                      },
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+          );
+        }
+      },
+      child: ListTile(
+        leading: ClipOval(
+          child: SizedBox(
+            width: 35.w,
+            height: 35.h,
+            child: CachedImage(snapshot['profileImage']),
+          ),
         ),
-      ),
-      title: Text(
-        snapshot['username'],
-        style: TextStyle(
-          fontSize: 13.sp,
-          fontWeight: FontWeight.bold,
-          color: Colors.black,
+        title: Row(
+          children: [
+            Text(
+              snapshot['username'],
+              style: TextStyle(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              formattedTime,
+              style: TextStyle(fontSize: 11.sp, color: Colors.grey),
+            ),
+          ],
         ),
-      ),
-      subtitle: Text(
-        snapshot['comment'],
-        style: TextStyle(fontSize: 13.sp, color: Colors.black),
+        subtitle: Text(
+          snapshot['comment'],
+          style: TextStyle(fontSize: 13.sp, color: Colors.black),
+        ),
       ),
     );
   }

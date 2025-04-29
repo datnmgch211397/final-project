@@ -57,8 +57,8 @@ class _PostWidgetState extends State<PostWidget> {
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           child: DraggableScrollableSheet(
-            maxChildSize: 0.5,
-            initialChildSize: 0.5,
+            maxChildSize: 0.6,
+            initialChildSize: 0.6,
             minChildSize: 0.2,
             builder: (context, scrollController) {
               return Comment('posts', widget.snapshot['postId']);
@@ -96,7 +96,6 @@ class _PostWidgetState extends State<PostWidget> {
                 title: Text('Delete Post', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   _deletePost();
-                 
                 },
               ),
             ListTile(

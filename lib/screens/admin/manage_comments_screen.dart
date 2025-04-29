@@ -363,7 +363,9 @@ class _ManageCommentsScreenState extends State<ManageCommentsScreen> {
   Future<Widget> _buildReelThumbnail(String videoUrl, String reelId) async {
     try {
       if (!_videoControllers.containsKey(reelId)) {
-        final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+        final controller = VideoPlayerController.networkUrl(
+          Uri.parse(videoUrl),
+        );
         await controller.initialize();
         _videoControllers[reelId] = controller;
       }

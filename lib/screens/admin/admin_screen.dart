@@ -1,10 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:final_app2/screens/admin/admin_routes.dart';
-import 'package:final_app2/screens/admin/manage_comments_screen.dart';
-import 'package:final_app2/screens/admin/manage_posts_screen.dart';
-import 'package:final_app2/screens/admin/manage_reels_screen.dart';
-import 'package:final_app2/screens/admin/manage_users_screen.dart';
-import 'package:final_app2/screens/admin/dashboard_screen.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
