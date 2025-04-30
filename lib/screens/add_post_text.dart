@@ -37,18 +37,15 @@ class _AddPostTextScreenState extends State<AddPostTextScreen> {
                       isLoading = true;
                     });
 
-                    // Check if user is logged in
                     if (FirebaseAuth.instance.currentUser == null) {
                       throw Exception('User not logged in');
                     }
 
-                    // Upload image to storage
                     String postUrl = await StorageMethod().uploadImageToStorage(
                       'post',
                       widget._file,
                     );
 
-                    // Create post in Firestore
                     await Firebase_Firestore().createPost(
                       postImage: postUrl,
                       caption: caption.text,

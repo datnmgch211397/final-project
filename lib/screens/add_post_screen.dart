@@ -13,7 +13,7 @@ class AddPostScreen extends StatefulWidget {
 }
 
 class _AddPostScreenState extends State<AddPostScreen> {
-  File? _selectedImage; // Biến lưu ảnh được chọn
+  File? _selectedImage; 
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage() async {
@@ -22,7 +22,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     );
     if (pickedFile != null) {
       setState(() {
-        _selectedImage = File(pickedFile.path); // Cập nhật ảnh được chọn
+        _selectedImage = File(pickedFile.path);
       });
     }
   }
@@ -68,7 +68,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
               ),
             ),
           ),
-          // Hiển thị ảnh lớn ở trên cùng
           SizedBox(
             height: 375.h,
             child:
