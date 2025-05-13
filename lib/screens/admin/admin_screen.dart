@@ -207,6 +207,13 @@ class _AdminScreenState extends State<AdminScreen> {
             AdminRoutes.goToManageComments(context);
           },
         ),
+        _buildManagementItem(
+          title: 'Manage Dashboard',
+          icon: Icons.dashboard,
+          onTap: () {
+            AdminRoutes.goToDashboard(context);
+          },
+        ),
       ],
     );
   }
