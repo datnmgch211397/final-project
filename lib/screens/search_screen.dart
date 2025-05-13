@@ -64,7 +64,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         crossAxisCount: 3,
                         mainAxisSpacing: 3,
                         crossAxisSpacing: 3,
-                        pattern: [
+                        pattern: const [
                           QuiltedGridTile(2, 1),
                           QuiltedGridTile(2, 2),
                           QuiltedGridTile(1, 1),

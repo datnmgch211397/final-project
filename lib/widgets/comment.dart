@@ -91,7 +91,6 @@ class _CommentState extends State<Comment> {
                     GestureDetector(
                       onTap: () async {
                         if (comment.text.isNotEmpty) {
-                          // Lấy thông tin bài viết/reel
                           final postDoc = await _firestore
                               .collection(widget.type)
                               .doc(widget.uid)
@@ -101,7 +100,6 @@ class _CommentState extends State<Comment> {
                             final postData =
                                 postDoc.data() as Map<String, dynamic>;
 
-                            // Tạo thông báo khi comment
                             NotificationService().createCommentNotification(
                               postId: widget.uid,
                               postType: widget.type,
