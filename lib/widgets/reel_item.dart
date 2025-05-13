@@ -185,11 +185,6 @@ class _ReelItemState extends State<ReelItem> {
     );
   }
 
-  void _onShareTap() {
-    // TODO: Implement share functionality
-    print('Share tapped');
-  }
-
   void _showMoreOptions() {
     showModalBottomSheet(
       context: context,
@@ -379,10 +374,19 @@ class _ReelItemState extends State<ReelItem> {
                   style: TextStyle(color: Colors.white, fontSize: 12.sp),
                 ),
                 SizedBox(height: 15.h),
-                _buildActionButton(Icons.comment, _commentCount,
-                    onTap: _onCommentTap),
-                SizedBox(height: 15.h),
-                _buildActionButton(Icons.send, 0, onTap: _onShareTap),
+                GestureDetector(
+                  onTap: _onCommentTap,
+                  child: Column(
+                    children: [
+                      Icon(Icons.comment, color: Colors.white, size: 28.w),
+                      SizedBox(height: 3.h),
+                      Text(
+                        _commentCount.toString(),
+                        style: TextStyle(color: Colors.white, fontSize: 12.sp),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -472,29 +476,9 @@ class _ReelItemState extends State<ReelItem> {
             top: 0,
             right: 0,
             child: IconButton(
-              icon: Icon(Icons.more_horiz, color: Colors.white),
+              icon: const Icon(Icons.more_horiz, color: Colors.white),
               onPressed: _showMoreOptions,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton(
-    IconData icon,
-    int count, {
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.white, size: 28.w),
-          SizedBox(height: 3.h),
-          Text(
-            count.toString(),
-            style: TextStyle(color: Colors.white, fontSize: 12.sp),
           ),
         ],
       ),
