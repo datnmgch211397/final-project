@@ -3,7 +3,6 @@ import 'package:final_app2/screens/admin/manage_users_screen.dart';
 import 'package:final_app2/screens/admin/manage_posts_screen.dart';
 import 'package:final_app2/screens/admin/manage_reels_screen.dart';
 import 'package:final_app2/screens/admin/manage_comments_screen.dart';
-import 'package:final_app2/screens/admin/dashboard_screen.dart';
 
 class AdminRoutes {
   static void goToManageUsers(BuildContext context) {
@@ -30,9 +29,4 @@ class AdminRoutes {
     );
   }
 
-  static void goToDashboard(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const DashboardScreen()));
-  }
 }
