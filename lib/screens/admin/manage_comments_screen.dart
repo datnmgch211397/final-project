@@ -1,3 +1,7 @@
+import 'package:final_app2/screens/post_screen.dart';
+import 'package:final_app2/screens/reels_screen.dart';
+import 'package:final_app2/widgets/post_widget.dart';
+import 'package:final_app2/widgets/reel_item.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -69,14 +73,12 @@ class _ManageCommentsScreenState extends State<ManageCommentsScreen> {
           ),
         ],
       ),
-      body: _buildCommentsList(),
+      body: _buildCommentsFromSubcollections(),
     );
   }
 
-  Widget _buildCommentsList() {
-    return _buildCommentsFromSubcollections();
-  }
 
+  /// Builds the comments from subcollections based on the selected filter option.
   Widget _buildCommentsFromSubcollections() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _getCommentsFromSubcollections(),
@@ -352,211 +354,46 @@ class _ManageCommentsScreenState extends State<ManageCommentsScreen> {
       });
     }
   }
-
-  Future<Widget> _buildReelThumbnail(String videoUrl, String reelId) async {
-    try {
-      if (!_videoControllers.containsKey(reelId)) {
-        final controller = VideoPlayerController.networkUrl(
-          Uri.parse(videoUrl),
-        );
-        await controller.initialize();
-        _videoControllers[reelId] = controller;
-      }
-
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: AspectRatio(
-          aspectRatio: 1,
-          child: VideoPlayer(_videoControllers[reelId]!),
-        ),
-      );
-    } catch (e) {
-      // Return a placeholder on error
-      return Container(
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Center(
-          child: Icon(Icons.video_library, color: Colors.white, size: 40),
-        ),
-      );
-    }
-  }
-
   Future<void> _viewContentDetails(String contentId, String contentType) async {
-    try {
-      final contentDoc =
-          await _firestore.collection(contentType).doc(contentId).get();
+  try {
+    final contentDoc = await _firestore.collection(contentType).doc(contentId).get();
 
-      if (!contentDoc.exists) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Content not found')));
-        }
-        return;
+    if (!contentDoc.exists) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Content not found')),
+        );
       }
+      return;
+    }
 
-      if (!mounted) return;
+    final contentData = contentDoc.data();
 
-      final contentData = contentDoc.data() as Map<String, dynamic>;
-      final String title =
-          contentType == 'posts' ? 'Post Details' : 'Reel Details';
-      final bool isPost = contentType == 'posts';
-
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(title),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundImage: NetworkImage(
-                        contentData['profileImage'] ?? '',
-                      ),
-                      onBackgroundImageError: (_, __) =>
-                          const Icon(Icons.person),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      contentData['username'] ?? 'Unknown',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Media
-                if (isPost && contentData['postImage'] != null)
-                  Container(
-                    height: 200,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        contentData['postImage'],
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.image_not_supported),
-                      ),
-                    ),
-                  ),
-
-                // Reel video thumbnail using VideoPlayerController
-                if (!isPost && contentData['video'] != null)
-                  Container(
-                    height: 250,
-                    width: double.infinity,
-                    child: FutureBuilder<Widget>(
-                      future: _buildReelThumbnail(
-                        contentData['video'],
-                        contentId,
-                      ),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                              ),
-                            ),
-                          );
-                        }
-
-                        if (snapshot.hasError || !snapshot.hasData) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.error_outline,
-                                color: Colors.white,
-                                size: 40,
-                              ),
-                            ),
-                          );
-                        }
-
-                        return Stack(
-                          children: [
-                            snapshot.data!,
-                            const Center(
-                              child: Icon(
-                                Icons.play_circle_fill,
-                                color: Colors.white70,
-                                size: 50,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-
-                const SizedBox(height: 12),
-
-                const Text(
-                  'Caption:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  isPost
-                      ? (contentData['description'] ?? 'No caption')
-                      : (contentData['caption'] ?? 'No caption'),
-                ),
-
-                const SizedBox(height: 8),
-
-                Row(
-                  children: [
-                    const Icon(Icons.favorite, color: Colors.red, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${(contentData['like'] as List?)?.length ?? 0} likes',
-                    ),
-                  ],
-                ),
-              ],
+    if (contentType == 'posts') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PostScreen(contentData),
+        ),
+      );
+    } else if (contentType == 'reels') {
+       Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Scaffold(
+            body: SafeArea(
+              child: ReelItem(contentData!),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                // Clear video controller for this reel when closing
-                if (!isPost && _videoControllers.containsKey(contentId)) {
-                  _videoControllers[contentId]!.pause();
-                }
-                Navigator.pop(context);
-              },
-              child: const Text('Close'),
-            ),
-          ],
         ),
       );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
-      }
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
     }
   }
+}
 }

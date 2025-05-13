@@ -55,11 +55,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   getdata() async {
-    DocumentSnapshot snap =
-        await _firebaseFirestore
-            .collection('users')
-            .doc(_auth.currentUser!.uid)
-            .get();
+    DocumentSnapshot snap = await _firebaseFirestore
+        .collection('users')
+        .doc(_auth.currentUser!.uid)
+        .get();
     List follow = (snap.data() as dynamic)['following'];
     if (follow.contains(widget.uid)) {
       setState(() {
@@ -96,147 +95,142 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     showDialog(
       context: context,
-      builder:
-          (context) => StatefulBuilder(
-            builder:
-                (context, setDialogState) => AlertDialog(
-                  title: Text('Edit Profile'),
-                  content: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GestureDetector(
-                          onTap: () async {
-                            final ImagePicker picker = ImagePicker();
-                            final XFile? image = await picker.pickImage(
-                              source: ImageSource.gallery,
-                            );
-                            if (image != null) {
-                              setDialogState(() {
-                                selectedImage = File(image.path);
-                              });
-                            }
-                          },
-                          child: CircleAvatar(
-                            radius: 50,
-                            backgroundImage:
-                                selectedImage != null
-                                    ? FileImage(selectedImage!)
-                                    : NetworkImage(currentUser.profile)
-                                        as ImageProvider,
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        TextField(
-                          controller: usernameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Username',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        TextField(
-                          controller: bioController,
-                          decoration: const InputDecoration(
-                            labelText: 'Bio',
-                            border: OutlineInputBorder(),
-                          ),
-                          maxLines: 3,
-                        ),
-                      ],
-                    ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Edit Profile'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final ImagePicker picker = ImagePicker();
+                    final XFile? image = await picker.pickImage(
+                      source: ImageSource.gallery,
+                    );
+                    if (image != null) {
+                      setDialogState(() {
+                        selectedImage = File(image.path);
+                      });
+                    }
+                  },
+                  child: CircleAvatar(
+                    radius: 50,
+                    backgroundImage: selectedImage != null
+                        ? FileImage(selectedImage!)
+                        : NetworkImage(currentUser.profile) as ImageProvider,
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        if (usernameController.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Username cannot be empty')),
-                          );
-                          return;
-                        }
-
-                        if (usernameController.text.length < 3) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Username must be at least 3 characters',
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-
-                        try {
-                          setDialogState(() {
-                            _isLoading = true;
-                          });
-
-                          if (selectedImage != null) {
-                            imageUrl = await StorageMethod()
-                                .uploadImageToStorage(
-                                  'Profile',
-                                  selectedImage!,
-                                );
-                          }
-
-                          String res = await Firebase_Firestore()
-                              .updateUserProfile(
-                                uid: widget.uid,
-                                username: usernameController.text,
-                                bio: bioController.text,
-                                profileImage: imageUrl,
-                              );
-
-                          setDialogState(() {
-                            _isLoading = false;
-                          });
-
-                          if (res == 'success') {
-                            Navigator.pop(context);
-                            setState(() {}); // Refresh the profile screen
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error updating profile: $res'),
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          setDialogState(() {
-                            _isLoading = false;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error updating profile: $e'),
-                            ),
-                          );
-                        }
-                      },
-                      child:
-                          _isLoading
-                              ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                              : Text('Save'),
-                    ),
-                  ],
                 ),
+                SizedBox(height: 20),
+                TextField(
+                  controller: usernameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Username',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: bioController,
+                  decoration: const InputDecoration(
+                    labelText: 'Bio',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (usernameController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Username cannot be empty')),
+                  );
+                  return;
+                }
+
+                if (usernameController.text.length < 3) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Username must be at least 3 characters',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+
+                try {
+                  setDialogState(() {
+                    _isLoading = true;
+                  });
+
+                  if (selectedImage != null) {
+                    imageUrl = await StorageMethod().uploadImageToStorage(
+                      'Profile',
+                      selectedImage!,
+                    );
+                  }
+
+                  String res = await Firebase_Firestore().updateUserProfile(
+                    uid: widget.uid,
+                    username: usernameController.text,
+                    bio: bioController.text,
+                    profileImage: imageUrl,
+                  );
+
+                  setDialogState(() {
+                    _isLoading = false;
+                  });
+
+                  if (res == 'success') {
+                    Navigator.pop(context);
+                    setState(() {}); // Refresh the profile screen
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error updating profile: $res'),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  setDialogState(() {
+                    _isLoading = false;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating profile: $e'),
+                    ),
+                  );
+                }
+              },
+              child: _isLoading
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text('Save'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Future<Widget> _buildReelThumbnail(String videoUrl, String reelId) async {
     if (!_videoControllers.containsKey(reelId)) {
-      final controller = VideoPlayerController.network(videoUrl);
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(videoUrl),
+      );
       await controller.initialize();
       _videoControllers[reelId] = controller;
     }
@@ -275,11 +269,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     // Posts Tab
                     StreamBuilder(
-                      stream:
-                          _firebaseFirestore
-                              .collection('posts')
-                              .where('uid', isEqualTo: widget.uid)
-                              .snapshots(),
+                      stream: _firebaseFirestore
+                          .collection('posts')
+                          .where('uid', isEqualTo: widget.uid)
+                          .snapshots(),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {
                           return const Center(
@@ -295,10 +288,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         return GridView.builder(
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                mainAxisSpacing: 1,
-                                crossAxisSpacing: 1,
-                              ),
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 1,
+                            crossAxisSpacing: 1,
+                          ),
                           itemCount: snapshot.data!.docs.length,
                           itemBuilder: (context, index) {
                             var snap = snapshot.data!.docs[index];
@@ -306,8 +299,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               onTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder:
-                                        (context) => PostScreen(snap.data()),
+                                    builder: (context) =>
+                                        PostScreen(snap.data()),
                                   ),
                                 );
                               },
@@ -319,11 +312,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     // Reels Tab
                     StreamBuilder(
-                      stream:
-                          _firebaseFirestore
-                              .collection('reels')
-                              .where('uid', isEqualTo: widget.uid)
-                              .snapshots(),
+                      stream: _firebaseFirestore
+                          .collection('reels')
+                          .where('uid', isEqualTo: widget.uid)
+                          .snapshots(),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {
                           return const Center(
@@ -338,10 +330,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         return GridView.builder(
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                mainAxisSpacing: 1,
-                                crossAxisSpacing: 1,
-                              ),
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 1,
+                            crossAxisSpacing: 1,
+                          ),
                           itemCount: snapshot.data!.docs.length,
                           itemBuilder: (context, index) {
                             var snap = snapshot.data!.docs[index];
@@ -349,11 +341,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               onTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder:
-                                        (context) => ReelsScreen(
-                                          initialIndex: index,
-                                          initialReels: snapshot.data!.docs,
-                                        ),
+                                    builder: (context) => ReelsScreen(
+                                      initialIndex: index,
+                                      initialReels: snapshot.data!.docs,
+                                    ),
                                   ),
                                 );
                               },
@@ -529,21 +520,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: isCurrentUser ? Colors.grey.shade400 : Colors.blue,
                     ),
                   ),
-                  child:
-                      isCurrentUser
-                          ? Text(
-                            'Edit Profile',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14.sp),
-                          )
-                          : Text(
-                            'Follow',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              color: Colors.white,
-                            ),
+                  child: isCurrentUser
+                      ? Text(
+                          'Edit Profile',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14.sp),
+                        )
+                      : Text(
+                          'Follow',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.white,
                           ),
+                        ),
                 ),
               ),
             ),
@@ -629,8 +619,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (context) => Center(child: CircularProgressIndicator()),
       );
 
-      final chatId =
-          await chatController.getChatRoom(widget.uid) ??
+      final chatId = await chatController.getChatRoom(widget.uid) ??
           await chatController.createChatRoom(widget.uid);
 
       Navigator.pop(context);
@@ -638,8 +627,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder:
-              (context) => ChatScreen(chatId: chatId, receiverId: widget.uid),
+          builder: (context) =>
+              ChatScreen(chatId: chatId, receiverId: widget.uid),
         ),
       );
     } catch (e) {

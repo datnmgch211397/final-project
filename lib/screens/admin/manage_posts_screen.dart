@@ -174,16 +174,16 @@ class _ManagePostsScreenState extends State<ManagePostsScreen> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Xác nhận xóa'),
-            content: const Text('Bạn có chắc chắn muốn xóa bài viết này?'),
+            title: const Text('Confirm Deletion'),
+            content: const Text('Are you sure you want to delete this post?'),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Hủy'),
+                child: const Text('Cancel'),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Xóa'),
+                child: const Text('Delete'),
               ),
             ],
           );
@@ -197,13 +197,13 @@ class _ManagePostsScreenState extends State<ManagePostsScreen> {
         if (result == 'success') {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Xóa bài viết thành công')),
+              const SnackBar(content: Text('Post deleted successfully')),
             );
           }
         } else {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Lỗi khi xóa bài viết: $result')),
+              SnackBar(content: Text('Error deleting post: $result')),
             );
           }
         }
@@ -211,7 +211,7 @@ class _ManagePostsScreenState extends State<ManagePostsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e')),
+          SnackBar(content: Text('Error: $e')),
         );
       }
     } finally {

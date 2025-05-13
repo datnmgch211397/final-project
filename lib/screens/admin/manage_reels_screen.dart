@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:final_app2/widgets/reel_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:video_player/video_player.dart';
@@ -227,54 +228,18 @@ class _ManageReelsScreenState extends State<ManageReelsScreen> {
     );
   }
 
-  void _showReelDetails(Map<String, dynamic> data, String reelId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reel Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: NetworkImage(data['profileImage']),
-                ),
-                title: Text(data['username'] ?? 'Unknown'),
-                subtitle:
-                    Text('Likes: ${(data['like'] as List?)?.length ?? 0}'),
-              ),
-              SizedBox(height: 10.h),
-              const Text('Caption:',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(data['caption'] ?? 'No caption'),
-              SizedBox(height: 10.h),
-              const Text('Date:',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(
-                data['time'] != null
-                    ? (data['time'] as Timestamp).toDate().toString()
-                    : 'Unknown',
-              ),
-            ],
-          ),
+ void _showReelDetails(Map<String, dynamic> data, String reelId) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => Scaffold(
+        body: SafeArea(
+          child: ReelItem(data),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteReel(reelId);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Future<void> _deleteReel(String reelId) async {
     try {
