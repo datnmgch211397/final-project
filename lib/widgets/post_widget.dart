@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:final_app2/screens/profile_screen.dart';
+import 'package:final_app2/data/firebase_service/notification_service.dart';
 
 class PostWidget extends StatefulWidget {
   final Map<String, dynamic> snapshot;
@@ -38,6 +39,15 @@ class _PostWidgetState extends State<PostWidget> {
       uid: user,
       postId: widget.snapshot['postId'],
     );
+
+    // Tạo thông báo khi like
+    NotificationService().createLikeNotification(
+      postId: widget.snapshot['postId'],
+      postType: 'posts',
+      postOwnerId: widget.snapshot['uid'],
+      postOwnerName: widget.snapshot['username'],
+    );
+
     Future.delayed(Duration(milliseconds: 400), () {
       if (mounted) {
         setState(() {
@@ -120,51 +130,50 @@ class _PostWidgetState extends State<PostWidget> {
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Edit Post'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: captionController,
-                  decoration: InputDecoration(
-                    labelText: 'Caption',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-                SizedBox(height: 10),
-                TextField(
-                  controller: locationController,
-                  decoration: InputDecoration(
-                    labelText: 'Location',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
+      builder: (context) => AlertDialog(
+        title: Text('Edit Post'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: captionController,
+              decoration: InputDecoration(
+                labelText: 'Caption',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancel'),
+            SizedBox(height: 10),
+            TextField(
+              controller: locationController,
+              decoration: InputDecoration(
+                labelText: 'Location',
+                border: OutlineInputBorder(),
               ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  String res = await Firebase_Firestore().updatePost(
-                    postId: widget.snapshot['postId'],
-                    caption: captionController.text,
-                    location: locationController.text,
-                  );
-                  if (res == 'success') {
-                    setState(() {});
-                  }
-                },
-                child: Text('Save'),
-              ),
-            ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
           ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              String res = await Firebase_Firestore().updatePost(
+                postId: widget.snapshot['postId'],
+                caption: captionController.text,
+                location: locationController.text,
+              );
+              if (res == 'success') {
+                setState(() {});
+              }
+            },
+            child: Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -202,9 +211,8 @@ class _PostWidgetState extends State<PostWidget> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder:
-                              (context) =>
-                                  ProfileScreen(uid: widget.snapshot['uid']),
+                          builder: (context) =>
+                              ProfileScreen(uid: widget.snapshot['uid']),
                         ),
                       );
                     },
@@ -219,9 +227,8 @@ class _PostWidgetState extends State<PostWidget> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder:
-                              (context) =>
-                                  ProfileScreen(uid: widget.snapshot['uid']),
+                          builder: (context) =>
+                              ProfileScreen(uid: widget.snapshot['uid']),
                         ),
                       );
                     },
@@ -304,10 +311,9 @@ class _PostWidgetState extends State<PostWidget> {
                       widget.snapshot['like'].contains(user)
                           ? Icons.favorite
                           : Icons.favorite_border,
-                      color:
-                          widget.snapshot['like'].contains(user)
-                              ? Colors.red
-                              : Colors.black,
+                      color: widget.snapshot['like'].contains(user)
+                          ? Colors.red
+                          : Colors.black,
                     ),
                   ),
                 ),

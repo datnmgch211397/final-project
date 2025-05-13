@@ -28,7 +28,6 @@ class _ManageCommentsScreenState extends State<ManageCommentsScreen> {
 
   @override
   void dispose() {
-    // Dispose all video controllers
     for (var controller in _videoControllers.values) {
       controller.dispose();
     }
@@ -116,13 +115,10 @@ class _ManageCommentsScreenState extends State<ManageCommentsScreen> {
   Future<List<Map<String, dynamic>>> _getCommentsFromSubcollections() async {
     List<Map<String, dynamic>> allComments = [];
 
-    // Get all posts
     final postsSnapshot = await _firestore.collection('posts').get();
 
-    // Get all reels
     final reelsSnapshot = await _firestore.collection('reels').get();
 
-    // Process post comments if needed
     if (_filterOption == 'All Comments' || _filterOption == 'Post Comments') {
       for (var postDoc in postsSnapshot.docs) {
         final commentsSnapshot =
@@ -139,7 +135,6 @@ class _ManageCommentsScreenState extends State<ManageCommentsScreen> {
       }
     }
 
-    // Process reel comments if needed
     if (_filterOption == 'All Comments' || _filterOption == 'Reel Comments') {
       for (var reelDoc in reelsSnapshot.docs) {
         final commentsSnapshot =
@@ -156,12 +151,11 @@ class _ManageCommentsScreenState extends State<ManageCommentsScreen> {
       }
     }
 
-    // Sort by time if available
     allComments.sort((a, b) {
       final aTime = a['time'] as Timestamp?;
       final bTime = b['time'] as Timestamp?;
       if (aTime == null || bTime == null) return 0;
-      return bTime.compareTo(aTime); // Descending order (newest first)
+      return bTime.compareTo(aTime);
     });
 
     return allComments;
@@ -200,8 +194,8 @@ class _ManageCommentsScreenState extends State<ManageCommentsScreen> {
                       CircleAvatar(
                         radius: 16.r,
                         backgroundImage: NetworkImage(profileImage),
-                        onBackgroundImageError:
-                            (e, s) => const Icon(Icons.person),
+                        onBackgroundImageError: (e, s) =>
+                            const Icon(Icons.person),
                       ),
                     SizedBox(width: 8.w),
                     Text(
@@ -218,30 +212,29 @@ class _ManageCommentsScreenState extends State<ManageCommentsScreen> {
                         vertical: 2.h,
                       ),
                       decoration: BoxDecoration(
-                        color:
-                            parentType == 'posts'
-                                ? Colors.blue.shade100
-                                : Colors.purple.shade100,
+                        color: parentType == 'posts'
+                            ? Colors.blue.shade100
+                            : Colors.purple.shade100,
                         borderRadius: BorderRadius.circular(4.r),
                       ),
                       child: Text(
                         parentType == 'posts' ? 'Post' : 'Reel',
                         style: TextStyle(
                           fontSize: 10.sp,
-                          color:
-                              parentType == 'posts'
-                                  ? Colors.blue.shade800
-                                  : Colors.purple.shade800,
+                          color: parentType == 'posts'
+                              ? Colors.blue.shade800
+                              : Colors.purple.shade800,
                         ),
                       ),
                     ),
                   ],
                 ),
-                Text(
-                  formattedDate,
-                  style: TextStyle(color: Colors.grey, fontSize: 12.sp),
-                ),
               ],
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              formattedDate,
+              style: TextStyle(color: Colors.grey, fontSize: 12.sp),
             ),
             SizedBox(height: 8.h),
             Text(text),
@@ -269,12 +262,12 @@ class _ManageCommentsScreenState extends State<ManageCommentsScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed:
-                          () => _showDeleteSubcollectionCommentConfirmation(
-                            commentId,
-                            parentId,
-                            parentType,
-                          ),
+                      onPressed: () =>
+                          _showDeleteSubcollectionCommentConfirmation(
+                        commentId,
+                        parentId,
+                        parentType,
+                      ),
                       constraints: const BoxConstraints(),
                       padding: EdgeInsets.zero,
                       iconSize: 20.w,
@@ -414,154 +407,149 @@ class _ManageCommentsScreenState extends State<ManageCommentsScreen> {
 
       showDialog(
         context: context,
-        builder:
-            (context) => AlertDialog(
-              title: Text(title),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (context) => AlertDialog(
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundImage: NetworkImage(
-                            contentData['profileImage'] ?? '',
-                          ),
-                          onBackgroundImageError:
-                              (_, __) => const Icon(Icons.person),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          contentData['username'] ?? 'Unknown',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Media
-                    if (isPost && contentData['postImage'] != null)
-                      Container(
-                        height: 200,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            contentData['postImage'],
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (context, error, stackTrace) =>
-                                    const Icon(Icons.image_not_supported),
-                          ),
-                        ),
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundImage: NetworkImage(
+                        contentData['profileImage'] ?? '',
                       ),
-
-                    // Reel video thumbnail using VideoPlayerController
-                    if (!isPost && contentData['video'] != null)
-                      Container(
-                        height: 250,
-                        width: double.infinity,
-                        child: FutureBuilder<Widget>(
-                          future: _buildReelThumbnail(
-                            contentData['video'],
-                            contentId,
-                          ),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            if (snapshot.hasError || !snapshot.hasData) {
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.error_outline,
-                                    color: Colors.white,
-                                    size: 40,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            return Stack(
-                              children: [
-                                snapshot.data!,
-                                // Play icon overlay
-                                const Center(
-                                  child: Icon(
-                                    Icons.play_circle_fill,
-                                    color: Colors.white70,
-                                    size: 50,
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-
-                    const SizedBox(height: 12),
-
-                    // Caption
-                    const Text(
-                      'Caption:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      onBackgroundImageError: (_, __) =>
+                          const Icon(Icons.person),
                     ),
+                    const SizedBox(width: 8),
                     Text(
-                      isPost
-                          ? (contentData['description'] ?? 'No caption')
-                          : (contentData['caption'] ?? 'No caption'),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Likes
-                    Row(
-                      children: [
-                        const Icon(Icons.favorite, color: Colors.red, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${(contentData['like'] as List?)?.length ?? 0} likes',
-                        ),
-                      ],
+                      contentData['username'] ?? 'Unknown',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    // Clear video controller for this reel when closing
-                    if (!isPost && _videoControllers.containsKey(contentId)) {
-                      _videoControllers[contentId]!.pause();
-                    }
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Close'),
+                const SizedBox(height: 12),
+
+                // Media
+                if (isPost && contentData['postImage'] != null)
+                  Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        contentData['postImage'],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.image_not_supported),
+                      ),
+                    ),
+                  ),
+
+                // Reel video thumbnail using VideoPlayerController
+                if (!isPost && contentData['video'] != null)
+                  Container(
+                    height: 250,
+                    width: double.infinity,
+                    child: FutureBuilder<Widget>(
+                      future: _buildReelThumbnail(
+                        contentData['video'],
+                        contentId,
+                      ),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (snapshot.hasError || !snapshot.hasData) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.error_outline,
+                                color: Colors.white,
+                                size: 40,
+                              ),
+                            ),
+                          );
+                        }
+
+                        return Stack(
+                          children: [
+                            snapshot.data!,
+                            const Center(
+                              child: Icon(
+                                Icons.play_circle_fill,
+                                color: Colors.white70,
+                                size: 50,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+
+                const SizedBox(height: 12),
+
+                const Text(
+                  'Caption:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  isPost
+                      ? (contentData['description'] ?? 'No caption')
+                      : (contentData['caption'] ?? 'No caption'),
+                ),
+
+                const SizedBox(height: 8),
+
+                Row(
+                  children: [
+                    const Icon(Icons.favorite, color: Colors.red, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${(contentData['like'] as List?)?.length ?? 0} likes',
+                    ),
+                  ],
                 ),
               ],
             ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // Clear video controller for this reel when closing
+                if (!isPost && _videoControllers.containsKey(contentId)) {
+                  _videoControllers[contentId]!.pause();
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Close'),
+            ),
+          ],
+        ),
       );
     } catch (e) {
       if (mounted) {

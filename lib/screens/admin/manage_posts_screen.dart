@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:final_app2/util/image_cached.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:final_app2/data/firebase_service/firestore.dart';
 
 class ManagePostsScreen extends StatefulWidget {
   const ManagePostsScreen({Key? key}) : super(key: key);
@@ -12,7 +13,9 @@ class ManagePostsScreen extends StatefulWidget {
 
 class _ManagePostsScreenState extends State<ManagePostsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final Firebase_Firestore _firebaseFirestore = Firebase_Firestore();
   String _searchQuery = '';
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -38,11 +41,10 @@ class _ManagePostsScreenState extends State<ManagePostsScreen> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  _firestore
-                      .collection('posts')
-                      .orderBy('time', descending: true)
-                      .snapshots(),
+              stream: _firestore
+                  .collection('posts')
+                  .orderBy('time', descending: true)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -59,16 +61,13 @@ class _ManagePostsScreenState extends State<ManagePostsScreen> {
                 // Filter posts based on search query
                 var filteredDocs = snapshot.data!.docs;
                 if (_searchQuery.isNotEmpty) {
-                  filteredDocs =
-                      filteredDocs.where((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final username =
-                            data['username'].toString().toLowerCase();
-                        final caption =
-                            data['caption'].toString().toLowerCase();
-                        return username.contains(_searchQuery) ||
-                            caption.contains(_searchQuery);
-                      }).toList();
+                  filteredDocs = filteredDocs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final username = data['username'].toString().toLowerCase();
+                    final caption = data['caption'].toString().toLowerCase();
+                    return username.contains(_searchQuery) ||
+                        caption.contains(_searchQuery);
+                  }).toList();
                 }
 
                 return ListView.builder(
@@ -166,49 +165,61 @@ class _ManagePostsScreenState extends State<ManagePostsScreen> {
 
   Future<void> _deletePost(String postId) async {
     try {
+      setState(() {
+        _isLoading = true;
+      });
+
       // Show confirmation dialog
-      final shouldDelete = await showDialog<bool>(
+      final bool? confirm = await showDialog<bool>(
         context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text('Delete Post'),
-              content: const Text(
-                'Are you sure you want to delete this post? This action cannot be undone.',
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Xác nhận xóa'),
+            content: const Text('Bạn có chắc chắn muốn xóa bài viết này?'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Hủy'),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text(
-                    'Delete',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-              ],
-            ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Xóa'),
+              ),
+            ],
+          );
+        },
       );
 
-      if (shouldDelete != true) return;
+      if (confirm == true) {
+        // Use Firebase_Firestore method to delete post
+        final result = await _firebaseFirestore.deletePost(postId: postId);
 
-      // Delete post
-      await _firestore.collection('posts').doc(postId).delete();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Post deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+        if (result == 'success') {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Xóa bài viết thành công')),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Lỗi khi xóa bài viết: $result')),
+            );
+          }
+        }
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error deleting post: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 }

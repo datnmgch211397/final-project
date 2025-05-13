@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:final_app2/screens/profile_screen.dart';
+import 'package:final_app2/data/firebase_service/notification_service.dart';
 
 class ReelItem extends StatefulWidget {
   final Map<String, dynamic> snapshot;
@@ -26,7 +27,8 @@ class _ReelItemState extends State<ReelItem> {
   String user = '';
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  bool _isDeleted = false;
+  final bool _isDeleted = false;
+  int _commentCount = 0;
 
   @override
   void initState() {
@@ -34,14 +36,14 @@ class _ReelItemState extends State<ReelItem> {
     _initializeVideo();
     user = _auth.currentUser!.uid;
     _checkFollowingStatus();
+    _fetchCommentCount();
   }
 
   Future<void> _initializeVideo() async {
     try {
       _controller = VideoPlayerController.networkUrl(
-          Uri.parse(widget.snapshot['video']),
-        )
-        ..initialize().then((_) {
+        Uri.parse(widget.snapshot['video']),
+      )..initialize().then((_) {
           if (mounted) {
             setState(() {});
             _controller.setLooping(true);
@@ -56,11 +58,10 @@ class _ReelItemState extends State<ReelItem> {
 
   void _checkFollowingStatus() async {
     if (_auth.currentUser!.uid != widget.snapshot['uid']) {
-      DocumentSnapshot userDoc =
-          await _firestore
-              .collection('users')
-              .doc(_auth.currentUser!.uid)
-              .get();
+      DocumentSnapshot userDoc = await _firestore
+          .collection('users')
+          .doc(_auth.currentUser!.uid)
+          .get();
       List following = (userDoc.data() as dynamic)['following'];
       setState(() {
         isFollowing = following.contains(widget.snapshot['uid']);
@@ -73,6 +74,19 @@ class _ReelItemState extends State<ReelItem> {
     if (res == 'success') {
       setState(() {
         isFollowing = !isFollowing;
+      });
+    }
+  }
+
+  void _fetchCommentCount() async {
+    final snap = await _firestore
+        .collection('reels')
+        .doc(widget.snapshot['reelId'])
+        .collection('comments')
+        .get();
+    if (mounted) {
+      setState(() {
+        _commentCount = snap.docs.length;
       });
     }
   }
@@ -104,6 +118,15 @@ class _ReelItemState extends State<ReelItem> {
       uid: user,
       postId: widget.snapshot['reelId'],
     );
+
+    // Tạo thông báo khi like
+    NotificationService().createLikeNotification(
+      postId: widget.snapshot['reelId'],
+      postType: 'reels',
+      postOwnerId: widget.snapshot['uid'],
+      postOwnerName: widget.snapshot['username'],
+    );
+
     Future.delayed(Duration(milliseconds: 400), () {
       if (mounted) {
         setState(() {
@@ -120,6 +143,14 @@ class _ReelItemState extends State<ReelItem> {
       uid: user,
       postId: widget.snapshot['reelId'],
     );
+
+    NotificationService().createLikeNotification(
+      postId: widget.snapshot['reelId'],
+      postType: 'reels',
+      postOwnerId: widget.snapshot['uid'],
+      postOwnerName: widget.snapshot['username'],
+    );
+
     setState(() {
       isAnimating = true;
     });
@@ -204,37 +235,36 @@ class _ReelItemState extends State<ReelItem> {
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Edit Reel'),
-            content: TextField(
-              controller: captionController,
-              decoration: InputDecoration(
-                labelText: 'Caption',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  String res = await Firebase_Firestore().updateReel(
-                    reelId: widget.snapshot['reelId'],
-                    caption: captionController.text,
-                  );
-                  if (res == 'success') {
-                    Navigator.pop(context);
-                    setState(() {});
-                  }
-                },
-                child: Text('Save'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text('Edit Reel'),
+        content: TextField(
+          controller: captionController,
+          decoration: InputDecoration(
+            labelText: 'Caption',
+            border: OutlineInputBorder(),
           ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              String res = await Firebase_Firestore().updateReel(
+                reelId: widget.snapshot['reelId'],
+                caption: captionController.text,
+              );
+              if (res == 'success') {
+                Navigator.pop(context);
+                setState(() {});
+              }
+            },
+            child: Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -274,7 +304,7 @@ class _ReelItemState extends State<ReelItem> {
           if (!isPlaying)
             Center(
               child: Container(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.black38,
                   shape: BoxShape.circle,
                 ),
@@ -290,22 +320,25 @@ class _ReelItemState extends State<ReelItem> {
             ),
 
           // Like animation
-          Center(
-            child: AnimatedOpacity(
-              duration: Duration(milliseconds: 200),
-              opacity: isAnimating ? 1 : 0,
-              child: LikeAnimation(
-                isAnimation: isAnimating,
-                duration: Duration(milliseconds: 400),
-                isLike: true,
-                onEnd: () {
-                  if (mounted) {
-                    setState(() {
-                      isAnimating = false;
-                    });
-                  }
-                },
-                child: Icon(Icons.favorite, size: 100.w, color: Colors.white),
+          IgnorePointer(
+            ignoring: !isAnimating,
+            child: Center(
+              child: AnimatedOpacity(
+                duration: Duration(milliseconds: 200),
+                opacity: isAnimating ? 1 : 0,
+                child: LikeAnimation(
+                  isAnimation: isAnimating,
+                  duration: Duration(milliseconds: 400),
+                  isLike: true,
+                  onEnd: () {
+                    if (mounted) {
+                      setState(() {
+                        isAnimating = false;
+                      });
+                    }
+                  },
+                  child: Icon(Icons.favorite, size: 100.w, color: Colors.white),
+                ),
               ),
             ),
           ),
@@ -333,10 +366,9 @@ class _ReelItemState extends State<ReelItem> {
                       widget.snapshot['like'].contains(user)
                           ? Icons.favorite
                           : Icons.favorite_border,
-                      color:
-                          widget.snapshot['like'].contains(user)
-                              ? Colors.red
-                              : Colors.white,
+                      color: widget.snapshot['like'].contains(user)
+                          ? Colors.red
+                          : Colors.white,
                       size: 28.w,
                     ),
                   ),
@@ -347,7 +379,8 @@ class _ReelItemState extends State<ReelItem> {
                   style: TextStyle(color: Colors.white, fontSize: 12.sp),
                 ),
                 SizedBox(height: 15.h),
-                _buildActionButton(Icons.comment, 0, onTap: _onCommentTap),
+                _buildActionButton(Icons.comment, _commentCount,
+                    onTap: _onCommentTap),
                 SizedBox(height: 15.h),
                 _buildActionButton(Icons.send, 0, onTap: _onShareTap),
               ],
@@ -365,7 +398,7 @@ class _ReelItemState extends State<ReelItem> {
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                  colors: [Colors.black.withAlpha(204), Colors.transparent],
                 ),
               ),
               child: Column(
@@ -378,10 +411,9 @@ class _ReelItemState extends State<ReelItem> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder:
-                                  (context) => ProfileScreen(
-                                    uid: widget.snapshot['uid'],
-                                  ),
+                              builder: (context) => ProfileScreen(
+                                uid: widget.snapshot['uid'],
+                              ),
                             ),
                           );
                         },
@@ -397,10 +429,9 @@ class _ReelItemState extends State<ReelItem> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder:
-                                  (context) => ProfileScreen(
-                                    uid: widget.snapshot['uid'],
-                                  ),
+                              builder: (context) => ProfileScreen(
+                                uid: widget.snapshot['uid'],
+                              ),
                             ),
                           );
                         },

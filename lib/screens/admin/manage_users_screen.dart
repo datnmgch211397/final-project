@@ -54,18 +54,15 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                   return const Center(child: Text('No users found'));
                 }
 
-                // Filter users based on search query
                 var filteredDocs = snapshot.data!.docs;
                 if (_searchQuery.isNotEmpty) {
-                  filteredDocs =
-                      filteredDocs.where((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final username =
-                            data['username'].toString().toLowerCase();
-                        final email = data['email'].toString().toLowerCase();
-                        return username.contains(_searchQuery) ||
-                            email.contains(_searchQuery);
-                      }).toList();
+                  filteredDocs = filteredDocs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final username = data['username'].toString().toLowerCase();
+                    final email = data['email'].toString().toLowerCase();
+                    return username.contains(_searchQuery) ||
+                        email.contains(_searchQuery);
+                  }).toList();
                 }
 
                 return ListView.builder(
@@ -96,10 +93,9 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                             Text(
                               'Role: ${role.toUpperCase()}',
                               style: TextStyle(
-                                color:
-                                    role == 'admin'
-                                        ? Colors.purple
-                                        : Colors.green,
+                                color: role == 'admin'
+                                    ? Colors.purple
+                                    : Colors.green,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -113,44 +109,42 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                               _deleteUser(userId);
                             }
                           },
-                          itemBuilder:
-                              (context) => [
-                                PopupMenuItem(
-                                  value: 'change_role',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        role == 'admin'
-                                            ? Icons.person
-                                            : Icons.admin_panel_settings,
-                                        color:
-                                            role == 'admin'
-                                                ? Colors.grey
-                                                : Colors.purple,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        role == 'admin'
-                                            ? 'Make User'
-                                            : 'Make Admin',
-                                      ),
-                                    ],
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'change_role',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    role == 'admin'
+                                        ? Icons.person
+                                        : Icons.admin_panel_settings,
+                                    color: role == 'admin'
+                                        ? Colors.grey
+                                        : Colors.purple,
                                   ),
-                                ),
-                                PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.delete,
-                                        color: Colors.red,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      const Text('Delete User'),
-                                    ],
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    role == 'admin'
+                                        ? 'Make User'
+                                        : 'Make Admin',
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  const Text('Delete User'),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -206,56 +200,76 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
         return;
       }
 
-      // Show confirmation dialog
       final shouldDelete = await showDialog<bool>(
         context: context,
-        builder:
-            (context) => AlertDialog(
-              title: const Text('Delete User'),
-              content: const Text(
-                'Are you sure you want to delete this user? This action cannot be undone.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text(
-                    'Delete',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-              ],
+        builder: (context) => AlertDialog(
+          title: const Text('Delete User'),
+          content: const Text(
+            'Are you sure you want to delete this user? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
             ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
       );
 
       if (shouldDelete != true) return;
 
-      // Delete user's posts
-      final postsQuery =
-          await _firestore
-              .collection('posts')
-              .where('uid', isEqualTo: userId)
-              .get();
+      // Delete all posts and their comments
+      final postsQuery = await _firestore
+          .collection('posts')
+          .where('uid', isEqualTo: userId)
+          .get();
 
       for (var doc in postsQuery.docs) {
+        // Delete all comments in the post
+        final commentsQuery = await _firestore
+            .collection('posts')
+            .doc(doc.id)
+            .collection('comments')
+            .get();
+
+        for (var comment in commentsQuery.docs) {
+          await comment.reference.delete();
+        }
+
+        // Delete the post
         await _firestore.collection('posts').doc(doc.id).delete();
       }
 
-      // Delete user's reels
-      final reelsQuery =
-          await _firestore
-              .collection('reels')
-              .where('uid', isEqualTo: userId)
-              .get();
+      // Delete all reels and their comments
+      final reelsQuery = await _firestore
+          .collection('reels')
+          .where('uid', isEqualTo: userId)
+          .get();
 
       for (var doc in reelsQuery.docs) {
+        // Delete all comments in the reel
+        final commentsQuery = await _firestore
+            .collection('reels')
+            .doc(doc.id)
+            .collection('comments')
+            .get();
+
+        for (var comment in commentsQuery.docs) {
+          await comment.reference.delete();
+        }
+
+        // Delete the reel
         await _firestore.collection('reels').doc(doc.id).delete();
       }
 
-      // Delete user document
+      // Delete the user
       await _firestore.collection('users').doc(userId).delete();
 
       ScaffoldMessenger.of(context).showSnackBar(

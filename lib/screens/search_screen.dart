@@ -107,7 +107,6 @@ class _SearchScreenState extends State<SearchScreen> {
                       return const Center(child: Text('No user available'));
                     }
 
-                    // Lọc dữ liệu theo searchQuery
                     final filteredUsers =
                         snapshot.data!.docs.where((doc) {
                           final username =

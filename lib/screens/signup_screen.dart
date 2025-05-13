@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:final_app2/data/firebase_service/firebase_auth.dart';
+import 'package:final_app2/screens/otp_screen.dart';
 import 'package:final_app2/util/dialog.dart';
 import 'package:final_app2/util/exception.dart';
 import 'package:final_app2/util/imagepicker.dart';
@@ -17,266 +18,284 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final email = TextEditingController();
-  FocusNode emailFocus = FocusNode();
   final password = TextEditingController();
-  FocusNode passwordFocus = FocusNode();
-  final bio = TextEditingController();
-  FocusNode bioFocus = FocusNode();
-  final username = TextEditingController();
-  FocusNode usernameFocus = FocusNode();
   final passwordConfirm = TextEditingController();
-  FocusNode passwordConfirmFocus = FocusNode();
+  final username = TextEditingController();
+  final bio = TextEditingController();
+
   File? _imageFile;
   bool obscurePassword = true;
+  bool isLoading = false;
+
+  void _showSnack(String message, {Color color = Colors.red}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
+  }
+
+  void _handleEmailSignUp() async {
+    try {
+      if (email.text.isEmpty ||
+          password.text.isEmpty ||
+          passwordConfirm.text.isEmpty ||
+          username.text.isEmpty ||
+          bio.text.isEmpty) {
+        throw exceptions("Please fill in all fields");
+      }
+
+      if (password.text != passwordConfirm.text) {
+        throw exceptions("Passwords do not match");
+      }
+
+      File profileImage = _imageFile ?? File('assets/images/person.jpg');
+
+      setState(() => isLoading = true);
+      await Authentication().signUp(
+        email: email.text,
+        password: password.text,
+        passwordConfirm: passwordConfirm.text,
+        username: username.text,
+        bio: bio.text,
+        profile: profileImage,
+      );
+      _showSnack("Signup successful!", color: Colors.green);
+    } on exceptions catch (e) {
+      dialogBuilder(context, e.message);
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _handleGoogleSignUp() async {
+    setState(() => isLoading = true);
+    try {
+      await Authentication().loginWithGoogle();
+      _showSnack("Google sign-in successful!", color: Colors.green);
+    } catch (e) {
+      _showSnack("Google sign-in failed: $e");
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _handlePhoneSignup() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final phoneDialogController = TextEditingController();
+
+        return AlertDialog(
+          title: const Text("Phone Signup"),
+          content: TextField(
+            controller: phoneDialogController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: "Phone Number (e.g., 0397778888)",
+              prefixIcon: Icon(Icons.phone),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                final phone = phoneDialogController.text.trim();
+                if (phone.isEmpty || phone.length < 9) {
+                  _showSnack("Please enter a valid phone number");
+                  return;
+                }
+
+                final fullPhoneNumber = "+84${phone.replaceFirst('0', '')}";
+                Navigator.pop(context);
+                _sendOtp(fullPhoneNumber);
+              },
+              child: const Text("Send OTP"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _sendOtp(String fullPhoneNumber) async {
+    setState(() => isLoading = true);
+    try {
+      await Authentication().loginWithPhoneNumber(
+        phoneNumber: fullPhoneNumber,
+        onCodeSent: (verificationId) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OtpScreen(verificationId: verificationId),
+            ),
+          );
+        },
+        onError: (error) {
+          _showSnack("Failed to send OTP: $error");
+        },
+      );
+    } catch (e) {
+      _showSnack("Phone signup failed: $e");
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  Widget buildTextField({
+    required String label,
+    required IconData icon,
+    required TextEditingController controller,
+    bool isPassword = false,
+    bool obscureText = false,
+    VoidCallback? toggleObscureText,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 5.h),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                      obscureText ? Icons.visibility_off : Icons.visibility),
+                  onPressed: toggleObscureText,
+                )
+              : null,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            SizedBox(width: 96.w, height: 40.h),
-            Center(
-              child: Image.asset(
-                'assets/images/logo.webp',
-                width: 200.w,
-                height: 150.h,
-              ),
-            ),
-            SizedBox(height: 40.h),
-            Center(
-              child: InkWell(
-                onTap: () async {
-                  File _imageFilee = await ImagePickerr().uploadImage(
-                    'gallery',
-                  );
-                  setState(() {
-                    _imageFile = _imageFilee;
-                  });
-                },
-                child:
-                    _imageFile == null
-                        ? CircleAvatar(
-                          radius: 36.r,
-                          backgroundColor: Colors.grey,
-                          child: CircleAvatar(
-                            radius: 34.r,
-                            backgroundColor: Colors.grey.shade100,
-                            backgroundImage: const AssetImage(
-                              'assets/images/person.jpg',
-                            ),
-                          ),
-                        )
-                        : CircleAvatar(
-                          radius: 36.r,
-                          backgroundColor: Colors.grey,
-                          child: CircleAvatar(
-                            radius: 34.r,
-
-                            backgroundImage:
-                                Image.file(
-                                  _imageFile!,
-                                  fit: BoxFit.cover,
-                                ).image,
-                            backgroundColor: Colors.grey.shade100,
-                          ),
-                        ),
-              ),
-            ),
-            SizedBox(height: 30.h),
-            textField(email, Icons.email, 'Email', emailFocus),
-            SizedBox(height: 15.h),
-            textField(username, Icons.person, 'Username', usernameFocus),
-            SizedBox(height: 10.h),
-            textField(bio, Icons.abc, 'bio', bioFocus),
-            SizedBox(height: 10.h),
-            textField(
-              password,
-              Icons.lock,
-              'Password',
-              passwordFocus,
-              isPassword: true,
-              obscureText: obscurePassword,
-              toggleObscureText:
-                  () => setState(() {
-                    obscurePassword = !obscurePassword;
-                  }),
-            ),
-            SizedBox(height: 10.h),
-            textField(
-              passwordConfirm,
-              Icons.lock,
-              'Confirm Password',
-              passwordConfirmFocus,
-              isPassword: true,
-              obscureText: obscurePassword,
-              toggleObscureText:
-                  () => setState(() {
-                    obscurePassword = !obscurePassword;
-                  }),
-            ),
-            SizedBox(height: 20.h),
-            signup(),
-            SizedBox(height: 10.h),
-            haveAccount(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget haveAccount() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 15.w),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Text(
-            'Already have an account?',
-            style: TextStyle(
-              fontSize: 13.sp,
-              color: Colors.grey,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          InkWell(
-            onTap: widget.show,
-            child: Text(
-              'Login',
-              style: TextStyle(
-                fontSize: 15.sp,
-                color: Colors.blue,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget signup() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 10.w),
-      child: InkWell(
-        onTap: () async {
-          try {
-            if (email.text.isEmpty ||
-                password.text.isEmpty ||
-                username.text.isEmpty ||
-                bio.text.isEmpty) {
-              throw exceptions('Please fill all fields');
-            }
-
-            if (password.text != passwordConfirm.text) {
-              throw exceptions('Passwords do not match');
-            }
-
-            // Use default profile image if no image is selected
-            File profileImage = _imageFile ?? File('assets/images/person.jpg');
-
-            await Authentication().signUp(
-              email: email.text,
-              password: password.text,
-              passwordConfirm: passwordConfirm.text,
-              username: username.text,
-              bio: bio.text,
-              profile: profileImage,
-            );
-          } on exceptions catch (e) {
-            dialogBuilder(context, e.message);
-          }
-        },
-        child: Container(
-          alignment: Alignment.center,
-          width: double.infinity,
-          height: 44.h,
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-          child: Text(
-            'Sign up',
-            style: TextStyle(
-              fontSize: 23.sp,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget forgot() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 10.w),
-      child: Text(
-        'Forgot Password?',
-        style: TextStyle(
-          fontSize: 15.sp,
-          color: Colors.blue,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
-Widget textField(
-  TextEditingController controller,
-  IconData icon,
-  String type,
-  FocusNode focusNode, {
-  bool isPassword = false,
-  bool obscureText = false,
-  VoidCallback? toggleObscureText,
-}) {
-  return Padding(
-    padding: EdgeInsets.symmetric(horizontal: 10.w),
-    child: Container(
-      height: 44.h,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(5.r),
-      ),
-
-      child: TextField(
-        style: TextStyle(fontSize: 18.sp, color: Colors.black),
-        controller: controller,
-        focusNode: focusNode,
-        obscureText: isPassword ? obscureText : false,
-        decoration: InputDecoration(
-          hintText: type,
-          prefixIcon: Icon(
-            icon,
-            color: focusNode.hasFocus ? Colors.black : Colors.grey,
-          ),
-          suffixIcon:
-              isPassword
-                  ? IconButton(
-                    icon: Icon(
-                      obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.grey,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                SizedBox(height: 30.h),
+                Center(
+                  child: Image.asset(
+                    'assets/images/logo.webp',
+                    width: 180.w,
+                    height: 120.h,
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                GestureDetector(
+                  onTap: () async {
+                    final pickedImage =
+                        await ImagePickerr().uploadImage('gallery');
+                    setState(() => _imageFile = pickedImage);
+                  },
+                  child: CircleAvatar(
+                    radius: 36.r,
+                    backgroundColor: Colors.grey,
+                    child: CircleAvatar(
+                      radius: 35.r,
+                      backgroundImage: _imageFile != null
+                          ? FileImage(_imageFile!)
+                          : const AssetImage('assets/images/person.jpg')
+                              as ImageProvider,
                     ),
-                    onPressed: toggleObscureText,
-                  )
-                  : null,
-          contentPadding: EdgeInsets.symmetric(
-            vertical: 15.h,
-            horizontal: 15.w,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(5.r),
-            borderSide: const BorderSide(color: Colors.grey, width: 2.0),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(5.r),
-            borderSide: const BorderSide(color: Colors.black, width: 2.0),
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                buildTextField(
+                    label: "Email", icon: Icons.email, controller: email),
+                buildTextField(
+                    label: "Username", icon: Icons.person, controller: username),
+                buildTextField(
+                    label: "Bio", icon: Icons.info, controller: bio),
+                buildTextField(
+                  label: "Password",
+                  icon: Icons.lock,
+                  controller: password,
+                  isPassword: true,
+                  obscureText: obscurePassword,
+                  toggleObscureText: () =>
+                      setState(() => obscurePassword = !obscurePassword),
+                ),
+                buildTextField(
+                  label: "Confirm Password",
+                  icon: Icons.lock_outline,
+                  controller: passwordConfirm,
+                  isPassword: true,
+                  obscureText: obscurePassword,
+                  toggleObscureText: () =>
+                      setState(() => obscurePassword = !obscurePassword),
+                ),
+                SizedBox(height: 20.h),
+                SizedBox(
+                  width: double.infinity,
+                  height: 45.h,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : _handleEmailSignUp,
+                    child: isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text("Sign up"),
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _circleButton(
+                      imagePath: 'assets/images/gmail.jpg',
+                      onTap: isLoading ? null : _handleGoogleSignUp,
+                    ),
+                    SizedBox(width: 20.w),
+                    _circleButton(
+                      imagePath: 'assets/images/phone.png',
+                      onTap: isLoading ? null : _handlePhoneSignup,
+                    ),
+                  ],
+                ),
+                SizedBox(height: 20.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Already have an account? "),
+                    GestureDetector(
+                      onTap: widget.show,
+                      child: const Text(
+                        "Login",
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
+
+  Widget _circleButton({
+    required String imagePath,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: CircleAvatar(
+        radius: 25.r,
+        backgroundColor: Colors.grey.shade200,
+        child: Image.asset(imagePath, width: 30.w, height: 30.h),
+      ),
+    );
+  }
 }

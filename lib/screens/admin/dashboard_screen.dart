@@ -28,15 +28,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
-      // Get users count
       final usersSnap = await _firestore.collection('users').get();
       userCount = usersSnap.docs.length;
 
-      // Get posts count
       final postsSnap = await _firestore.collection('posts').get();
       postCount = postsSnap.docs.length;
 
-      // Get reels count
       final reelsSnap = await _firestore.collection('reels').get();
       reelCount = reelsSnap.docs.length;
     } catch (e) {

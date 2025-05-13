@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:final_app2/screens/add_screen.dart';
 import 'package:final_app2/screens/chat_screen.dart';
 import 'package:final_app2/screens/inbox_screen.dart';
+import 'package:final_app2/screens/notifications_screen.dart';
 import 'package:final_app2/widgets/post_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +24,6 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         centerTitle: true,
-
         elevation: 0,
         title: SizedBox(
           width: 130.w,
@@ -40,10 +40,16 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
         actions: [
-          const Icon(
-            Icons.favorite_border_outlined,
-            color: Colors.black,
-            size: 25,
+          IconButton(
+            icon:
+                const Icon(Icons.favorite_border_outlined, color: Colors.black),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const NotificationsScreen()),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.message, color: Colors.black),
@@ -69,11 +75,10 @@ class _HomeScreenState extends State<HomeScreen> {
       body: CustomScrollView(
         slivers: [
           StreamBuilder(
-            stream:
-                _firebaseFirestore
-                    .collection('posts')
-                    .orderBy('time', descending: true)
-                    .snapshots(),
+            stream: _firebaseFirestore
+                .collection('posts')
+                .orderBy('time', descending: true)
+                .snapshots(),
             builder: (context, snapshot) {
               return SliverList(
                 delegate: SliverChildBuilderDelegate(

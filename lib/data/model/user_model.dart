@@ -6,6 +6,7 @@ class UserModel {
   final List following;
   final List followers;
   final String role;
+  final String phoneNumber; 
 
   UserModel({
     required this.email,
@@ -15,5 +16,6 @@ class UserModel {
     required this.following,
     required this.followers,
     this.role = 'user',
+    this.phoneNumber = '', 
   });
 }

@@ -4,9 +4,93 @@ import 'package:final_app2/data/firebase_service/firestore.dart';
 import 'package:final_app2/data/firebase_service/storage.dart';
 import 'package:final_app2/util/exception.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class Authentication {
-  FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<UserCredential?> loginWithGoogle() async {
+    try {
+      await GoogleSignIn().signOut();
+      final googleUser = await GoogleSignIn().signIn();
+      final googleAuth = await googleUser?.authentication;
+      final cred = GoogleAuthProvider.credential(
+        accessToken: googleAuth?.accessToken,
+        idToken: googleAuth?.idToken,
+      );
+      final userCredential = await _auth.signInWithCredential(cred);
+      try {
+        await Firebase_Firestore().getUser(uidd: userCredential.user!.uid);
+      } catch (e) {
+        await Firebase_Firestore().createUser(
+          email: userCredential.user!.email!,
+          username: userCredential.user!.displayName!,
+          bio: '',
+          profile:
+              userCredential.user!.photoURL! ??
+              'https://firebasestorage.googleapis.com/v0/b/final-app-6c3b5.firebasestorage.app/o/person.jpg?alt=media&token=1a434bc6-07fb-4af6-babd-cb1c4c5fa40e',
+        phoneNumber: '',
+        
+        );
+      }
+      return userCredential;
+    } catch (e) {
+      throw exceptions(e.toString());
+    }
+  }
+
+Future<UserCredential> verifySMSCode(
+    {required String verificationId, required String smsCode}) async {
+  try {
+    final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId, smsCode: smsCode);
+    final userCredential = await _auth.signInWithCredential(credential);
+
+    try {
+      await Firebase_Firestore().getUser(uidd: userCredential.user!.uid);
+    } catch (e) {
+      await Firebase_Firestore().createUser(
+        email: '',
+        username: 'New User',
+        bio: '',
+        profile:
+            'https://firebasestorage.googleapis.com/v0/b/final-app-6c3b5.firebasestorage.app/o/person.jpg?alt=media&token=1a434bc6-07fb-4af6-babd-cb1c4c5fa40e',
+        phoneNumber: userCredential.user?.phoneNumber ?? '',
+      );
+    }
+
+    return userCredential;
+  } catch (e) {
+    throw exceptions(e.toString());
+  }
+}
+
+Future<void> loginWithPhoneNumber({
+  required String phoneNumber,
+  required Function(String verificationId) onCodeSent,
+  required Function(String error) onError,
+}) async {
+  try {
+    await _auth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        await _auth.signInWithCredential(credential);
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        onError(e.message ?? 'Phone verification failed');
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        onCodeSent(verificationId);
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+      },
+    );
+  } catch (e) {
+    onError(e.toString());
+  }
+}
+
   Future<void> Login({required String email, required String password}) async {
     try {
       if (email.isNotEmpty && password.isNotEmpty) {
@@ -62,6 +146,7 @@ class Authentication {
             username: username,
             bio: bio,
             profile: profileUrl,
+            phoneNumber: '',
           );
         } else {
           throw exceptions('Passwords do not match');

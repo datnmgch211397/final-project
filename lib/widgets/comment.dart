@@ -5,6 +5,7 @@ import 'package:final_app2/util/image_cached.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:final_app2/data/firebase_service/notification_service.dart';
 
 class Comment extends StatefulWidget {
   Comment(this.type, this.uid, {super.key});
@@ -38,13 +39,12 @@ class _CommentState extends State<Comment> {
               child: Container(width: 100.w, height: 3.h, color: Colors.black),
             ),
             StreamBuilder<QuerySnapshot>(
-              stream:
-                  _firestore
-                      .collection(widget.type)
-                      .doc(widget.uid)
-                      .collection('comments')
-                      .orderBy('time', descending: true)
-                      .snapshots(),
+              stream: _firestore
+                  .collection(widget.type)
+                  .doc(widget.uid)
+                  .collection('comments')
+                  .orderBy('time', descending: true)
+                  .snapshots(),
               builder: (context, snapshot) {
                 return Padding(
                   padding: EdgeInsets.symmetric(vertical: 20.h),
@@ -89,9 +89,29 @@ class _CommentState extends State<Comment> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
                         if (comment.text.isNotEmpty) {
-                          Firebase_Firestore().createComment(
+                          // Lấy thông tin bài viết/reel
+                          final postDoc = await _firestore
+                              .collection(widget.type)
+                              .doc(widget.uid)
+                              .get();
+
+                          if (postDoc.exists) {
+                            final postData =
+                                postDoc.data() as Map<String, dynamic>;
+
+                            // Tạo thông báo khi comment
+                            NotificationService().createCommentNotification(
+                              postId: widget.uid,
+                              postType: widget.type,
+                              postOwnerId: postData['uid'],
+                              postOwnerName: postData['username'],
+                              comment: comment.text,
+                            );
+                          }
+
+                          await Firebase_Firestore().createComment(
                             comment: comment.text,
                             type: widget.type,
                             uidd: widget.uid,
@@ -134,33 +154,32 @@ class _CommentState extends State<Comment> {
         if (_auth.currentUser?.uid == snapshot['uid']) {
           showDialog(
             context: context,
-            builder:
-                (context) => AlertDialog(
-                  title: const Text('Delete Comment'),
-                  content: const Text(
-                    'Are you sure you want to delete this comment?',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        Navigator.pop(context);
-                        await Firebase_Firestore().deleteComment(
-                          type: widget.type,
-                          postId: widget.uid,
-                          commentId: commentId,
-                        );
-                      },
-                      child: const Text(
-                        'Delete',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  ],
+            builder: (context) => AlertDialog(
+              title: const Text('Delete Comment'),
+              content: const Text(
+                'Are you sure you want to delete this comment?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
                 ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await Firebase_Firestore().deleteComment(
+                      type: widget.type,
+                      postId: widget.uid,
+                      commentId: commentId,
+                    );
+                  },
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
           );
         }
       },
@@ -172,7 +191,8 @@ class _CommentState extends State<Comment> {
             child: CachedImage(snapshot['profileImage']),
           ),
         ),
-        title: Row(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               snapshot['username'],
@@ -182,7 +202,7 @@ class _CommentState extends State<Comment> {
                 color: Colors.black,
               ),
             ),
-            SizedBox(width: 8.w),
+            SizedBox(width: 8.h),
             Text(
               formattedTime,
               style: TextStyle(fontSize: 11.sp, color: Colors.grey),

@@ -34,44 +34,36 @@ class _AdminScreenState extends State<AdminScreen> {
     });
 
     try {
-      // Get user count
       final userSnapshot = await _firestore.collection('users').count().get();
       _userCount = userSnapshot.count ?? 0;
 
-      // Get post count
       final postSnapshot = await _firestore.collection('posts').count().get();
       _postCount = postSnapshot.count ?? 0;
 
-      // Get reel count
       final reelSnapshot = await _firestore.collection('reels').count().get();
       _reelCount = reelSnapshot.count ?? 0;
 
-      // Get comment count from post and reel subcollections
       int totalComments = 0;
 
-      // Get posts comments
       final postsSnapshot = await _firestore.collection('posts').get();
       for (var doc in postsSnapshot.docs) {
-        final commentsCount =
-            await _firestore
-                .collection('posts')
-                .doc(doc.id)
-                .collection('comments')
-                .count()
-                .get();
+        final commentsCount = await _firestore
+            .collection('posts')
+            .doc(doc.id)
+            .collection('comments')
+            .count()
+            .get();
         totalComments += commentsCount.count ?? 0;
       }
 
-      // Get reels comments
       final reelsSnapshot = await _firestore.collection('reels').get();
       for (var doc in reelsSnapshot.docs) {
-        final commentsCount =
-            await _firestore
-                .collection('reels')
-                .doc(doc.id)
-                .collection('comments')
-                .count()
-                .get();
+        final commentsCount = await _firestore
+            .collection('reels')
+            .doc(doc.id)
+            .collection('comments')
+            .count()
+            .get();
         totalComments += commentsCount.count ?? 0;
       }
 
@@ -106,36 +98,35 @@ class _AdminScreenState extends State<AdminScreen> {
           ),
         ],
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                padding: EdgeInsets.all(16.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'App Statistics',
-                      style: TextStyle(
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: EdgeInsets.all(16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'App Statistics',
+                    style: TextStyle(
+                      fontSize: 24.sp,
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(height: 16.h),
-                    _buildStatisticsGrid(),
-                    SizedBox(height: 32.h),
-                    Text(
-                      'Management',
-                      style: TextStyle(
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  ),
+                  SizedBox(height: 16.h),
+                  _buildStatisticsGrid(),
+                  SizedBox(height: 32.h),
+                  Text(
+                    'Management',
+                    style: TextStyle(
+                      fontSize: 24.sp,
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(height: 16.h),
-                    _buildManagementMenu(),
-                  ],
-                ),
+                  ),
+                  SizedBox(height: 16.h),
+                  _buildManagementMenu(),
+                ],
               ),
+            ),
     );
   }
 

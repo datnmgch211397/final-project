@@ -129,7 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         SizedBox(height: 20),
                         TextField(
                           controller: usernameController,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: 'Username',
                             border: OutlineInputBorder(),
                           ),
@@ -137,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         SizedBox(height: 10),
                         TextField(
                           controller: bioController,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: 'Bio',
                             border: OutlineInputBorder(),
                           ),
@@ -623,22 +623,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final ChatController chatController = ChatController();
 
     try {
-      // Show loading indicator
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => Center(child: CircularProgressIndicator()),
       );
 
-      // Get or create a chat room
       final chatId =
           await chatController.getChatRoom(widget.uid) ??
           await chatController.createChatRoom(widget.uid);
 
-      // Close loading dialog
       Navigator.pop(context);
 
-      // Navigate to chat screen
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -647,10 +643,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     } catch (e) {
-      // Close loading dialog
       Navigator.pop(context);
 
-      // Show error
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error starting chat: $e')));

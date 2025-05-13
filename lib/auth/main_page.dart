@@ -16,7 +16,6 @@ class MainPage extends StatelessWidget {
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.hasData) {
-            // Check user role and redirect accordingly
             return FutureBuilder<bool>(
               future: Firebase_Firestore().isCurrentUserAdmin(),
               builder: (context, adminSnapshot) {
@@ -24,12 +23,10 @@ class MainPage extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                // If the user is admin, redirect to admin screen
                 if (adminSnapshot.data == true) {
                   return const AdminScreen();
                 }
 
-                // Otherwise, redirect to the regular app
                 return const NavigationsScreen();
               },
             );

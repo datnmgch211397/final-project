@@ -52,7 +52,7 @@ class _NavigationsScreenState extends State<NavigationsScreen> {
           unselectedItemColor: Colors.grey,
           currentIndex: _currentIndex,
           onTap: navigationTapped,
-          items: [
+          items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
             BottomNavigationBarItem(icon: Icon(Icons.search), label: ''),
             BottomNavigationBarItem(icon: Icon(Icons.add_box), label: ''),
@@ -65,10 +65,10 @@ class _NavigationsScreenState extends State<NavigationsScreen> {
         controller: pageController,
         onPageChanged: onPageChanged,
         children: [
-          HomeScreen(),
-          SearchScreen(),
-          AddScreen(),
-          ReelsScreen(),
+          const HomeScreen(),
+          const SearchScreen(),
+          const AddScreen(),
+          const ReelsScreen(),
           ProfileScreen(uid: _auth.currentUser!.uid),
         ],
       ),

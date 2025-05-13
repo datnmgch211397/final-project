@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:final_app2/data/model/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
+import 'package:final_app2/data/firebase_service/notification_service.dart';
 
 class Firebase_Firestore {
   final FirebaseFirestore _firebaseFirestore = FirebaseFirestore.instance;
@@ -11,6 +12,7 @@ class Firebase_Firestore {
     required String username,
     required String bio,
     required String profile,
+    required String phoneNumber,
   }) async {
     try {
       if (_auth.currentUser == null) {
@@ -21,14 +23,15 @@ class Firebase_Firestore {
           .collection('users')
           .doc(_auth.currentUser!.uid)
           .set({
-            'email': email,
-            'username': username,
-            'bio': bio,
-            'profile': profile,
-            'followers': [],
-            'following': [],
-            'role': 'user',
-          });
+        'email': email,
+        'username': username,
+        'bio': bio,
+        'profile': profile,
+        'phoneNumber': phoneNumber,
+        'followers': [],
+        'following': [],
+        'role': 'user',
+      });
       return true;
     } on FirebaseException catch (e) {
       throw Exception('Failed to create user: ${e.message}');
@@ -43,11 +46,10 @@ class Firebase_Firestore {
         throw Exception('User not logged in');
       }
 
-      final user =
-          await _firebaseFirestore
-              .collection('users')
-              .doc(uidd ?? _auth.currentUser!.uid)
-              .get();
+      final user = await _firebaseFirestore
+          .collection('users')
+          .doc(uidd ?? _auth.currentUser!.uid)
+          .get();
 
       if (!user.exists || user.data() == null) {
         throw Exception('User data not found');
@@ -72,7 +74,7 @@ class Firebase_Firestore {
         profile: snapUser['profile'],
         followers: snapUser['followers'],
         following: snapUser['following'],
-        role: snapUser['role'] ?? 'user', // Default role is 'user' if not found
+        role: snapUser['role'] ?? 'user',
       );
     } on FirebaseException catch (e) {
       throw Exception('Firebase error: ${e.message}');
@@ -165,13 +167,13 @@ class Firebase_Firestore {
           .collection('comments')
           .doc(uid)
           .set({
-            'comment': comment,
-            'username': user.username,
-            'profileImage': user.profile,
-            'commentUid': uid,
-            'uid': _auth.currentUser!.uid,
-            'time': now,
-          });
+        'comment': comment,
+        'username': user.username,
+        'profileImage': user.profile,
+        'commentUid': uid,
+        'uid': _auth.currentUser!.uid,
+        'time': now,
+      });
       return true;
     } catch (e) {
       return false;
@@ -204,11 +206,10 @@ class Firebase_Firestore {
 
   Future<String> follow({required String uid}) async {
     String res = 'error';
-    DocumentSnapshot snap =
-        await _firebaseFirestore
-            .collection('users')
-            .doc(_auth.currentUser!.uid)
-            .get();
+    DocumentSnapshot snap = await _firebaseFirestore
+        .collection('users')
+        .doc(_auth.currentUser!.uid)
+        .get();
     List follow = (snap.data() as dynamic)['following'];
     try {
       if (follow.contains(uid)) {
@@ -216,8 +217,8 @@ class Firebase_Firestore {
             .collection('users')
             .doc(_auth.currentUser!.uid)
             .update({
-              'following': FieldValue.arrayRemove([uid]),
-            });
+          'following': FieldValue.arrayRemove([uid]),
+        });
         await _firebaseFirestore.collection('users').doc(uid).update({
           'followers': FieldValue.arrayRemove([_auth.currentUser!.uid]),
         });
@@ -226,11 +227,25 @@ class Firebase_Firestore {
             .collection('users')
             .doc(_auth.currentUser!.uid)
             .update({
-              'following': FieldValue.arrayUnion([uid]),
-            });
+          'following': FieldValue.arrayUnion([uid]),
+        });
         await _firebaseFirestore.collection('users').doc(uid).update({
           'followers': FieldValue.arrayUnion([_auth.currentUser!.uid]),
         });
+
+        // Get current user's username for the notification
+        final currentUserDoc = await _firebaseFirestore
+            .collection('users')
+            .doc(_auth.currentUser!.uid)
+            .get();
+        final currentUserData = currentUserDoc.data() as Map<String, dynamic>;
+
+        // Create follow notification
+        NotificationService().createFollowNotification(
+          followerId: _auth.currentUser!.uid,
+          followerName: currentUserData['username'],
+          followedUserId: uid,
+        );
       }
       res = 'success';
     } on Exception catch (e) {
@@ -246,23 +261,19 @@ class Firebase_Firestore {
     String? profileImage,
   }) async {
     try {
-      // Get current user data to keep existing profile if no new image
       final currentUser = await getUser(uidd: uid);
       final finalProfileImage = profileImage ?? currentUser.profile;
 
-      // Update user profile
       await _firebaseFirestore.collection('users').doc(uid).update({
         'username': username,
         'bio': bio,
         'profile': finalProfileImage,
       });
 
-      // Update all posts
-      final userPostsSnapshot =
-          await _firebaseFirestore
-              .collection('posts')
-              .where('uid', isEqualTo: uid)
-              .get();
+      final userPostsSnapshot = await _firebaseFirestore
+          .collection('posts')
+          .where('uid', isEqualTo: uid)
+          .get();
 
       for (var post in userPostsSnapshot.docs) {
         await post.reference.update({
@@ -271,12 +282,10 @@ class Firebase_Firestore {
         });
       }
 
-      // Update all reels
-      final userReelsSnapshot =
-          await _firebaseFirestore
-              .collection('reels')
-              .where('uid', isEqualTo: uid)
-              .get();
+      final userReelsSnapshot = await _firebaseFirestore
+          .collection('reels')
+          .where('uid', isEqualTo: uid)
+          .get();
 
       for (var reel in userReelsSnapshot.docs) {
         await reel.reference.update({
@@ -285,15 +294,13 @@ class Firebase_Firestore {
         });
       }
 
-      // Update comments in posts
       final allPostsSnapshot =
           await _firebaseFirestore.collection('posts').get();
       for (var post in allPostsSnapshot.docs) {
-        final commentsSnapshot =
-            await post.reference
-                .collection('comments')
-                .where('uid', isEqualTo: uid)
-                .get();
+        final commentsSnapshot = await post.reference
+            .collection('comments')
+            .where('uid', isEqualTo: uid)
+            .get();
         for (var comment in commentsSnapshot.docs) {
           await comment.reference.update({
             'username': username,
@@ -302,7 +309,6 @@ class Firebase_Firestore {
         }
       }
 
-      // Update comments in reels
       final allReelsSnapshot =
           await _firebaseFirestore.collection('reels').get();
       for (var reel in allReelsSnapshot.docs) {
@@ -342,12 +348,11 @@ class Firebase_Firestore {
 
   Future<String> deletePost({required String postId}) async {
     try {
-      final commentsSnapshot =
-          await _firebaseFirestore
-              .collection('posts')
-              .doc(postId)
-              .collection('comments')
-              .get();
+      final commentsSnapshot = await _firebaseFirestore
+          .collection('posts')
+          .doc(postId)
+          .collection('comments')
+          .get();
       for (var comment in commentsSnapshot.docs) {
         await comment.reference.delete();
       }
@@ -375,12 +380,11 @@ class Firebase_Firestore {
 
   Future<String> deleteReel({required String reelId}) async {
     try {
-      final commentsSnapshot =
-          await _firebaseFirestore
-              .collection('reels')
-              .doc(reelId)
-              .collection('comments')
-              .get();
+      final commentsSnapshot = await _firebaseFirestore
+          .collection('reels')
+          .doc(reelId)
+          .collection('comments')
+          .get();
       for (var comment in commentsSnapshot.docs) {
         await comment.reference.delete();
       }
@@ -409,7 +413,6 @@ class Firebase_Firestore {
     }
   }
 
-  // Check if the current user is an admin
   Future<bool> isCurrentUserAdmin() async {
     try {
       if (_auth.currentUser == null) {
@@ -423,7 +426,6 @@ class Firebase_Firestore {
     }
   }
 
-  // Get the role of the current user
   Future<String> getCurrentUserRole() async {
     try {
       if (_auth.currentUser == null) {
@@ -433,7 +435,7 @@ class Firebase_Firestore {
       final user = await getUser();
       return user.role;
     } catch (e) {
-      return 'user'; // Default to 'user' if any error occurs
+      return 'user';
     }
   }
 }
