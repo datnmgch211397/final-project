@@ -43,7 +43,8 @@ class _ReelItemState extends State<ReelItem> {
     try {
       _controller = VideoPlayerController.networkUrl(
         Uri.parse(widget.snapshot['video']),
-      )..initialize().then((_) {
+      );
+      _controller.initialize().then((_) {
           if (mounted) {
             setState(() {});
             _controller.setLooping(true);

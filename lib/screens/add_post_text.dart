@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:final_app2/data/firebase_service/firestore.dart';
 import 'package:final_app2/data/firebase_service/storage.dart';
+import 'package:final_app2/screens/home.dart';
+import 'package:final_app2/widgets/navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -82,65 +84,64 @@ class _AddPostTextScreenState extends State<AddPostTextScreen> {
         ],
       ),
       body: SafeArea(
-        child:
-            isLoading
-                ? Center(child: CircularProgressIndicator(color: Colors.black))
-                : Padding(
-                  padding: EdgeInsets.only(top: 10.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 5.h,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 65.w,
-                              height: 65.h,
-                              decoration: BoxDecoration(
-                                color: Colors.amber,
-                                image: DecorationImage(
-                                  image: FileImage(widget._file),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 10.w),
-                            SizedBox(
-                              width: 280.w,
-                              height: 60.h,
-                              child: TextField(
-                                controller: caption,
-                                decoration: const InputDecoration(
-                                  hintText: 'Write a caption...',
-                                  border: InputBorder.none,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+        child: isLoading
+            ? Center(child: CircularProgressIndicator(color: Colors.black))
+            : Padding(
+                padding: EdgeInsets.only(top: 10.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10.w,
+                        vertical: 5.h,
                       ),
-                      const Divider(),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10.w),
-                        child: SizedBox(
-                          width: 280.w,
-                          height: 30.h,
-                          child: TextField(
-                            controller: location,
-                            decoration: const InputDecoration(
-                              hintText: 'Add description...',
-                              border: InputBorder.none,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 65.w,
+                            height: 65.h,
+                            decoration: BoxDecoration(
+                              color: Colors.amber,
+                              image: DecorationImage(
+                                image: FileImage(widget._file),
+                                fit: BoxFit.cover,
+                              ),
                             ),
+                          ),
+                          SizedBox(width: 10.w),
+                          SizedBox(
+                            width: 280.w,
+                            height: 60.h,
+                            child: TextField(
+                              controller: caption,
+                              decoration: const InputDecoration(
+                                hintText: 'Write a caption...',
+                                border: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10.w),
+                      child: SizedBox(
+                        width: 280.w,
+                        height: 30.h,
+                        child: TextField(
+                          controller: location,
+                          decoration: const InputDecoration(
+                            hintText: 'Add description...',
+                            border: InputBorder.none,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+              ),
       ),
     );
   }

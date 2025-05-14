@@ -36,7 +36,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Padding(
               padding: EdgeInsets.all(16),
               child: TextField(
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Search users...',
                   prefixIcon: Icon(Icons.search),
                   border: OutlineInputBorder(),

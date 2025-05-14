@@ -24,13 +24,13 @@ class ChatController {
         .snapshots();
   }
 
-  Stream<QuerySnapshot> searchUsers(String query) {
-    return _firestore
-        .collection('users')
-        .where('email', isGreaterThanOrEqualTo: query)
-        .where('email', isLessThanOrEqualTo: query + '\uf8ff')
-        .snapshots();
-  }
+  // Stream<QuerySnapshot> searchUsers(String query) {
+  //   return _firestore
+  //       .collection('users')
+  //       .where('email', isGreaterThanOrEqualTo: query)
+  //       .where('email', isLessThanOrEqualTo: query + '\uf8ff')
+  //       .snapshots();
+  // }
 
   Future<void> sendMessage(
     String chatId,

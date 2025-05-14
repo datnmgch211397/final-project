@@ -31,7 +31,7 @@ class _ManagePostsScreenState extends State<ManagePostsScreen> {
                 });
               },
               decoration: InputDecoration(
-                hintText: 'Search posts by username or caption...',
+                hintText: 'Search posts...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10.r),
@@ -58,7 +58,7 @@ class _ManagePostsScreenState extends State<ManagePostsScreen> {
                   return const Center(child: Text('No posts found'));
                 }
 
-                // Filter posts based on search query
+
                 var filteredDocs = snapshot.data!.docs;
                 if (_searchQuery.isNotEmpty) {
                   filteredDocs = filteredDocs.where((doc) {

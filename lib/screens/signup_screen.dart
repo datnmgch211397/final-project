@@ -46,7 +46,12 @@ class _SignupScreenState extends State<SignupScreen> {
       if (password.text != passwordConfirm.text) {
         throw exceptions("Passwords do not match");
       }
-
+      if (password.text.length < 6) {
+        throw exceptions("Password must be at least 6 characters");
+      }
+      if(password.text.length >30){
+        throw exceptions("Password must be less than 30 characters");
+      }
       File profileImage = _imageFile ?? File('assets/images/person.jpg');
 
       setState(() => isLoading = true);

@@ -53,7 +53,7 @@ class _ManageReelsScreenState extends State<ManageReelsScreen> {
                 });
               },
               decoration: InputDecoration(
-                hintText: 'Search reels by username or caption...',
+                hintText: 'Search reels...',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10.r),

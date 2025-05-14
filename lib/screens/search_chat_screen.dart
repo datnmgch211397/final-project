@@ -13,7 +13,7 @@ class SearchChatScreen extends StatefulWidget {
 
 class _SearchChatScreenState extends State<SearchChatScreen> {
   final FirebaseAuth authController = FirebaseAuth.instance;
-  final ChatController chatController = ChatController();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   User? loggedInUser;
   String searchQuery = '';
@@ -43,14 +43,14 @@ class _SearchChatScreenState extends State<SearchChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: Text('Search Users')),
+      appBar: AppBar(title: const Text('Search Users')),
       body: Column(
         children: [
           Padding(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search users...',
+              decoration: const InputDecoration(
+                hintText: 'Search by username or email...',
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(),
               ),
@@ -59,40 +59,48 @@ class _SearchChatScreenState extends State<SearchChatScreen> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: chatController.searchUsers(searchQuery),
+              stream: _firestore.collection('users').snapshots(),
               builder: (context, snapshot) {
-                if (searchQuery.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No user available',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  );
-                }
-                if (!snapshot.hasData) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final users = snapshot.data!.docs;
-                List<UserTile> userWidgets = [];
-
-                for (var user in users) {
-                  final userData = user.data() as Map<String, dynamic>;
-                  final userId = userData['uid'] ?? '';
-                  final username = userData['username'] ?? 'Unknown';
-                  final email = userData['email'] ?? 'No email';
-                  final profile = userData['profile'] ?? '';
-
-                  if (userId != loggedInUser!.uid ) {
-                    final userWidget = UserTile(
-                      userId: userId,
-                      name: username,
-                      email: email,
-                      profile: profile,
-                    );
-                    userWidgets.add(userWidget);
-                  }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
                 }
-                return ListView(children: userWidgets);
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text('No users found'));
+                }
+                if (searchQuery.isEmpty) {
+                  return const Center(
+                      child: Text('No users found'));
+                }
+                final filteredUsers = snapshot.data!.docs.where((doc) {
+                  final userData = doc.data() as Map<String, dynamic>;
+                  final username =
+                      userData['username'].toString().toLowerCase();
+                  final email = userData['email'].toString().toLowerCase();
+                  return username.contains(searchQuery.toLowerCase()) ||
+                      email.contains(searchQuery.toLowerCase());
+                }).toList();
+
+                if (filteredUsers.isEmpty) {
+                  return const Center(child: Text('No users found'));
+                }
+
+                return ListView.builder(
+                  itemCount: filteredUsers.length,
+                  itemBuilder: (context, index) {
+                    final user = filteredUsers[index];
+                    final userData = user.data() as Map<String, dynamic>;
+
+                    return UserTile(
+                      userId: user.id,
+                      name: userData['username'],
+                      email: userData['email'],
+                      profile: userData['profile'],
+                    );
+                  },
+                );
               },
             ),
           ),
@@ -123,14 +131,13 @@ class UserTile extends StatelessWidget {
       title: Text(name),
       subtitle: Text(email),
       onTap: () async {
-        final chatId =
-            await chatController.getChatRoom(userId) ??
+        final chatId = await chatController.getChatRoom(userId) ??
             await chatController.createChatRoom(userId);
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => ChatScreen(chatId: chatId, receiverId: userId),
+            builder: (context) =>
+                ChatScreen(chatId: chatId, receiverId: userId),
           ),
         );
       },
